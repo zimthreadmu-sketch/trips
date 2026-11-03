@@ -28,6 +28,279 @@ interface DriverAppProps {
   vipMultiplier?: number
 }
 
+// ==========================================
+// 1. TRIPS TAB (JOURNEY HISTORY)
+// ==========================================
+function DriverTripsTab({ trips }: { trips: Trip[] }) {
+  const [filter, setFilter] = useState<"All" | "Regular" | "VIP">("All")
+
+  const visibleTrips = trips.filter(
+    (trip) => filter === "All" || trip.trip_type === filter
+  )
+
+  const vipCount = trips.filter((t) => t.trip_type === "VIP").length
+
+  return (
+    <div className="driver-tab-screen">
+      <div className="tab-title-row">
+        <div>
+          <span className="eyebrow">JOURNEY HISTORY</span>
+          <h2>My trips</h2>
+        </div>
+      </div>
+
+      <div className="trip-summary-card">
+        <div>
+          <span>TOTAL LOGGED TRIPS</span>
+          <strong>{trips.length}</strong>
+          <small>
+            <b>{vipCount}</b> VIP journeys
+          </small>
+        </div>
+        <div className="trip-ring">
+          <div>
+            <strong>{vipCount}</strong>
+            <span>VIP</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="tab-filter">
+        {(["All", "Regular", "VIP"] as const).map((item) => (
+          <button
+            key={item}
+            type="button"
+            className={filter === item ? "active" : ""}
+            onClick={() => setFilter(item)}
+          >
+            {item === "VIP" && <Icon name="sparkles" size={12} />}
+            {item}
+          </button>
+        ))}
+      </div>
+
+      <div className="trip-history-list">
+        {visibleTrips.length === 0 ? (
+          <div style={{ padding: "40px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
+            No trips logged in this view yet.
+          </div>
+        ) : (
+          visibleTrips.map((trip) => {
+            const isVip = trip.trip_type === "VIP"
+            return (
+              <article className="trip-history-item" key={trip.id}>
+                <div className={`trip-history-icon ${trip.trip_type.toLowerCase()}`}>
+                  <Icon name={isVip ? "sparkles" : "route"} size={17} />
+                </div>
+                <div className="trip-history-copy">
+                  <span className="trip-history-time">
+                    {new Date(trip.logged_at).toLocaleTimeString("en-ZA", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  <strong>
+                    {trip.origin_name} <Icon name="arrow" size={13} /> {trip.destination_name}
+                  </strong>
+                  <small>
+                    <span className={trip.trip_type.toLowerCase()}>{trip.trip_type}</span>
+                    {trip.payment_method} · {trip.driver_name || "Driver"}
+                  </small>
+                </div>
+                <div className="trip-history-fare">
+                  <strong>Rs {Number(trip.fare).toFixed(2)}</strong>
+                  <span style={{ fontSize: "10px", color: "#697184" }}>{trip.status}</span>
+                </div>
+              </article>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ==========================================
+// 2. INSIGHTS TAB (PERFORMANCE & REVENUE)
+// ==========================================
+function DriverInsightsTab({ trips, fuelLogs }: { trips: Trip[]; fuelLogs: FuelLog[] }) {
+  const [range, setRange] = useState<"Day" | "Week" | "Month">("Week")
+  const totalRevenue = trips.reduce((sum, t) => sum + Number(t.fare || 0), 0)
+  const totalFuel = fuelLogs.reduce((sum, f) => sum + Number(f.cost_amount || 0), 0)
+  const netEarnings = totalRevenue - totalFuel
+
+  return (
+    <div className="driver-tab-screen">
+      <div className="tab-title-row">
+        <div>
+          <span className="eyebrow">DRIVER ANALYTICS</span>
+          <h2>Shift Insights</h2>
+        </div>
+        <div className="range-pills">
+          {(["Day", "Week", "Month"] as const).map((item) => (
+            <button
+              type="button"
+              key={item}
+              className={range === item ? "active" : ""}
+              onClick={() => setRange(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="insight-hero-card">
+        <span>NET EARNINGS</span>
+        <strong>Rs {netEarnings.toLocaleString()}</strong>
+        <div className="insight-split">
+          <div>
+            <small>Gross revenue</small>
+            <b>Rs {totalRevenue.toLocaleString()}</b>
+          </div>
+          <div>
+            <small>Fuel expense</small>
+            <b style={{ color: "#ff777c" }}>−Rs {totalFuel.toLocaleString()}</b>
+          </div>
+        </div>
+      </div>
+
+      <div className="stats-2col">
+        <div className="mini-stat-card">
+          <span>COMPLETED TRIPS</span>
+          <strong>{trips.length}</strong>
+          <small>
+            <b style={{ color: "#20d59b" }}>{trips.filter((t) => t.trip_type === "VIP").length}</b> VIP
+          </small>
+        </div>
+        <div className="mini-stat-card">
+          <span>FUEL REFILLS</span>
+          <strong>{fuelLogs.length}</strong>
+          <small>
+            <b style={{ color: "#f5ad36" }}>
+              {fuelLogs.reduce((acc, f) => acc + Number(f.liters || 0), 0).toFixed(1)}L
+            </b> pumped
+          </small>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ==========================================
+// 3. SETTINGS TAB (ACCOUNT & VEHICLE)
+// ==========================================
+function DriverSettingsTab({
+  driver,
+  onDuty,
+  setOnDuty,
+  onAdminView,
+  onOpenDriverSwitcher,
+}: {
+  driver?: Driver | null
+  onDuty: boolean
+  setOnDuty: (duty: boolean) => void
+  onAdminView?: () => void
+  onOpenDriverSwitcher: () => void
+}) {
+  return (
+    <div className="driver-tab-screen">
+      <div className="tab-title-row">
+        <div>
+          <span className="eyebrow">DRIVER PROFILE</span>
+          <h2>Settings</h2>
+        </div>
+      </div>
+
+      <div
+        className="profile-card"
+        onClick={onOpenDriverSwitcher}
+        style={{ cursor: "pointer" }}
+        title="Tap to switch driver or change vehicle"
+      >
+        <span
+          className="profile-avatar"
+          style={{ background: driver?.avatar_color || "#10B981", color: "#03261d" }}
+        >
+          {driver?.initials || "DR"}
+          <i />
+        </span>
+        <div>
+          <strong>{driver?.name || "Driver"}</strong>
+          <span>Assigned: {driver?.vehicle || "Toyota HiAce"}</span>
+          <small>
+            <Icon name="check" size={11} /> Tap to switch profile or edit vehicle
+          </small>
+        </div>
+        <Icon name="chevron" size={16} />
+      </div>
+
+      <div className="settings-group">
+        <span className="settings-label">SHIFT CONTROLS</span>
+        <div className="settings-list">
+          <div className="setting-row">
+            <span className="setting-icon green">
+              <Icon name="users" size={17} />
+            </span>
+            <div>
+              <strong>Duty Status</strong>
+              <small>{onDuty ? "You are currently On Duty" : "You are currently Off Duty"}</small>
+            </div>
+            <button
+              type="button"
+              className={`mini-toggle ${onDuty ? "active" : ""}`}
+              onClick={() => setOnDuty(!onDuty)}
+              aria-label="Toggle duty status"
+            >
+              <i />
+            </button>
+          </div>
+
+          <div
+            className="setting-row"
+            onClick={onOpenDriverSwitcher}
+            style={{ cursor: "pointer" }}
+          >
+            <span className="setting-icon green">
+              <Icon name="car" size={17} />
+            </span>
+            <div>
+              <strong>{driver?.vehicle || "Toyota HiAce (4821 DC 18)"}</strong>
+              <small>Tap to change assigned vehicle</small>
+            </div>
+            <Icon name="chevron" size={15} />
+          </div>
+        </div>
+      </div>
+
+      {onAdminView && (
+        <div className="settings-group">
+          <span className="settings-label">MANAGEMENT PORTAL</span>
+          <div className="settings-list">
+            <div
+              className="setting-row"
+              onClick={onAdminView}
+              style={{ cursor: "pointer" }}
+            >
+              <span className="setting-icon">
+                <Icon name="trend" size={17} />
+              </span>
+              <div>
+                <strong>Admin Dashboard</strong>
+                <small>View audit table, fleet metrics & reports</small>
+              </div>
+              <Icon name="chevron" size={15} />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ==========================================
+// MAIN DRIVER APP COMPONENT
+// ==========================================
 export function DriverApp({
   desktopPreview = false,
   onAdminView,
@@ -47,11 +320,11 @@ export function DriverApp({
   baseFare = 60,
   vipMultiplier = 1.8,
 }: DriverAppProps) {
+  const [activeTab, setActiveTab] = useState<"shift" | "trips" | "insights" | "settings">("shift")
   const [onDuty, setOnDuty] = useState(true)
   const [tripSheetOpen, setTripSheetOpen] = useState(false)
   const [fuelDrawerOpen, setFuelDrawerOpen] = useState(false)
   const [driverSwitcherOpen, setDriverSwitcherOpen] = useState(false)
-  const [showAllLogs, setShowAllLogs] = useState(false)
 
   const today = new Date().toDateString()
   const todayTripsList = allTrips.filter(
@@ -64,8 +337,6 @@ export function DriverApp({
   const todayRev = todayTripsList.reduce((acc, t) => acc + Number(t.fare || 0), 0)
   const todayFuel = todayFuelList.reduce((acc, f) => acc + Number(f.cost_amount || 0), 0)
   const todayNet = todayRev - todayFuel
-
-  const displayedEntries = showAllLogs ? ledgerEntries : ledgerEntries.slice(0, 5)
 
   return (
     <main className={`mobile-shell ${desktopPreview ? "desktop-driver-preview" : ""}`}>
@@ -154,13 +425,23 @@ export function DriverApp({
           <div className="greeting-row">
             <div>
               <span className="eyebrow">
-                {new Date().toLocaleDateString("en-MU", {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                }).toUpperCase()}
+                {activeTab === "shift"
+                  ? new Date().toLocaleDateString("en-MU", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    }).toUpperCase()
+                  : "FLEETPULSE DRIVER"}
               </span>
-              <h1>Morning, Driver</h1>
+              <h1>
+                {activeTab === "shift"
+                  ? "Morning, Driver"
+                  : activeTab === "trips"
+                    ? "Trip history"
+                    : activeTab === "insights"
+                      ? "Performance"
+                      : "Account settings"}
+              </h1>
             </div>
 
             {/* Profile Avatar — opens Driver Switcher */}
@@ -200,119 +481,181 @@ export function DriverApp({
           </button>
         </header>
 
-        <section className="driver-content">
-          <div className="today-card">
-            <div className="today-card-head">
-              <span>TODAY’S SHIFT ACTIVITY</span>
-              <span className="trend-label">
-                <Icon name="trend" size={14} /> Live
-              </span>
-            </div>
-            <div className="mobile-metrics">
-              <div>
-                <span>Gross</span>
-                <strong>Rs {todayRev.toLocaleString()}</strong>
-              </div>
-              <div>
-                <span>Fuel</span>
-                <strong className="danger">
-                  {todayFuel > 0 ? `−Rs ${todayFuel.toLocaleString()}` : "Rs 0"}
-                </strong>
-              </div>
-              <div>
-                <span>Net</span>
-                <strong className="success">Rs {todayNet.toLocaleString()}</strong>
-              </div>
-            </div>
-          </div>
-
-          <div className="action-deck">
-            <button
-              type="button"
-              className="log-trip-button"
-              onClick={() => setTripSheetOpen(true)}
-              aria-label="Log new journey trip"
-            >
-              <span className="action-icon">
-                <Icon name="plus" size={23} />
-              </span>
-              <span>
-                <small>NEW JOURNEY</small>Log Trip
-              </span>
-              <Icon name="arrow" size={22} />
-            </button>
-            <button
-              type="button"
-              className="log-fuel-button"
-              onClick={() => setFuelDrawerOpen(true)}
-              aria-label="Log fuel expense"
-            >
-              <span className="fuel-icon">
-                <Icon name="fuel" size={20} />
-              </span>
-              <span>
-                <small>EXPENSE</small>Log Fuel
-              </span>
-              <Icon name="chevron" size={17} />
-            </button>
-          </div>
-
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">LIVE ACTIVITY</span>
-              <h2>Recent shift logs</h2>
-            </div>
-            {ledgerEntries.length > 5 && (
-              <button
-                type="button"
-                onClick={() => setShowAllLogs(!showAllLogs)}
-                aria-label={showAllLogs ? "Show recent 5 logs" : `View all ${ledgerEntries.length} shift logs`}
-              >
-                {showAllLogs ? "Show less" : `View all (${ledgerEntries.length})`}
-              </button>
-            )}
-          </div>
-
-          <div className="shift-feed">
-            {ledgerEntries.length === 0 ? (
-              <div style={{ padding: "36px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
-                <p style={{ margin: "0 0 6px 0", color: "#a5acba" }}>No shift activity logged yet.</p>
-                <p style={{ margin: 0, fontSize: "11px", color: "#626978" }}>
-                  Tap <strong style={{ color: "#20d59b" }}>+ Log Trip</strong> or <strong style={{ color: "#f5ad36" }}>⛽ Log Fuel</strong> to record your first entry.
-                </p>
-              </div>
-            ) : (
-              displayedEntries.map((item) => (
-                <article className="shift-item" key={item.id}>
-                  <div className={`log-icon ${item.tone}`}>
-                    <Icon
-                      name={
-                        item.type === "fuel"
-                          ? "fuel"
-                          : item.tone === "gold"
-                            ? "sparkles"
-                            : "route"
-                      }
-                      size={18}
-                    />
+        <section className={`driver-content ${activeTab !== "shift" ? "tab-content" : ""}`}>
+          {/* TAB 1: SHIFT VIEW */}
+          {activeTab === "shift" && (
+            <>
+              <div className="today-card">
+                <div className="today-card-head">
+                  <span>TODAY’S SHIFT ACTIVITY</span>
+                  <span className="trend-label">
+                    <Icon name="trend" size={14} /> Live
+                  </span>
+                </div>
+                <div className="mobile-metrics">
+                  <div>
+                    <span>Gross</span>
+                    <strong>Rs {todayRev.toLocaleString()}</strong>
                   </div>
-                  <div className="log-copy">
-                    <div className="log-title">
-                      <strong>{item.title}</strong>
-                      <time>{item.time}</time>
-                    </div>
-                    <div className="log-meta">
-                      <span className={`tag ${item.tone}`}>
-                        {item.detail}
-                      </span>
-                      <b className={item.tone}>{item.amount}</b>
-                    </div>
+                  <div>
+                    <span>Fuel</span>
+                    <strong className="danger">
+                      {todayFuel > 0 ? `−Rs ${todayFuel.toLocaleString()}` : "Rs 0"}
+                    </strong>
                   </div>
-                </article>
-              ))
-            )}
-          </div>
+                  <div>
+                    <span>Net</span>
+                    <strong className="success">Rs {todayNet.toLocaleString()}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div className="action-deck">
+                <button
+                  type="button"
+                  className="log-trip-button"
+                  onClick={() => setTripSheetOpen(true)}
+                  aria-label="Log new journey trip"
+                >
+                  <span className="action-icon">
+                    <Icon name="plus" size={23} />
+                  </span>
+                  <span>
+                    <small>NEW JOURNEY</small>Log Trip
+                  </span>
+                  <Icon name="arrow" size={22} />
+                </button>
+                <button
+                  type="button"
+                  className="log-fuel-button"
+                  onClick={() => setFuelDrawerOpen(true)}
+                  aria-label="Log fuel expense"
+                >
+                  <span className="fuel-icon">
+                    <Icon name="fuel" size={20} />
+                  </span>
+                  <span>
+                    <small>EXPENSE</small>Log Fuel
+                  </span>
+                  <Icon name="chevron" size={17} />
+                </button>
+              </div>
+
+              <div className="section-heading">
+                <div>
+                  <span className="eyebrow">LIVE ACTIVITY</span>
+                  <h2>Recent shift logs</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("trips")}
+                  aria-label="View all trips"
+                >
+                  View all
+                </button>
+              </div>
+
+              <div className="shift-feed">
+                {ledgerEntries.length === 0 ? (
+                  <div style={{ padding: "36px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
+                    <p style={{ margin: "0 0 6px 0", color: "#a5acba" }}>No shift activity logged yet.</p>
+                    <p style={{ margin: 0, fontSize: "11px", color: "#626978" }}>
+                      Tap <strong style={{ color: "#20d59b" }}>+ Log Trip</strong> or <strong style={{ color: "#f5ad36" }}>⛽ Log Fuel</strong> to record your first entry.
+                    </p>
+                  </div>
+                ) : (
+                  ledgerEntries.slice(0, 8).map((item) => (
+                    <article className="shift-item" key={item.id}>
+                      <div className={`log-icon ${item.tone}`}>
+                        <Icon
+                          name={
+                            item.type === "fuel"
+                              ? "fuel"
+                              : item.tone === "gold"
+                                ? "sparkles"
+                                : "route"
+                          }
+                          size={18}
+                        />
+                      </div>
+                      <div className="log-copy">
+                        <div className="log-title">
+                          <strong>{item.title}</strong>
+                          <time>{item.time}</time>
+                        </div>
+                        <div className="log-meta">
+                          <span className={`tag ${item.tone}`}>
+                            {item.detail}
+                          </span>
+                          <b className={item.tone}>{item.amount}</b>
+                        </div>
+                      </div>
+                    </article>
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
+          {/* TAB 2: TRIPS VIEW */}
+          {activeTab === "trips" && <DriverTripsTab trips={allTrips} />}
+
+          {/* TAB 3: INSIGHTS VIEW */}
+          {activeTab === "insights" && (
+            <DriverInsightsTab trips={allTrips} fuelLogs={fuelLogs} />
+          )}
+
+          {/* TAB 4: SETTINGS VIEW */}
+          {activeTab === "settings" && (
+            <DriverSettingsTab
+              driver={activeDriver}
+              onDuty={onDuty}
+              setOnDuty={setOnDuty}
+              onAdminView={onAdminView}
+              onOpenDriverSwitcher={() => setDriverSwitcherOpen(true)}
+            />
+          )}
         </section>
+
+        {/* BOTTOM NAVIGATION BAR */}
+        <nav className="mobile-nav" aria-label="Main driver navigation">
+          <button
+            type="button"
+            className={activeTab === "shift" ? "active" : ""}
+            onClick={() => setActiveTab("shift")}
+            aria-label="Shift dashboard tab"
+          >
+            <Icon name="car" />
+            <span>Shift</span>
+          </button>
+          <button
+            type="button"
+            className={activeTab === "trips" ? "active" : ""}
+            onClick={() => setActiveTab("trips")}
+            aria-label="Trips history tab"
+          >
+            <Icon name="route" />
+            <span>Trips</span>
+          </button>
+          <button
+            type="button"
+            className={activeTab === "insights" ? "active" : ""}
+            onClick={() => setActiveTab("insights")}
+            aria-label="Insights tab"
+          >
+            <Icon name="trend" />
+            <span>Insights</span>
+          </button>
+          <button
+            type="button"
+            className={activeTab === "settings" ? "active" : ""}
+            onClick={() => setActiveTab("settings")}
+            aria-label="Settings tab"
+          >
+            <Icon name="settings" />
+            <span>Settings</span>
+          </button>
+        </nav>
 
         {/* Log Trip Modal (with direct fare entry and on-the-fly location adding) */}
         <LogTripModal

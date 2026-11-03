@@ -44,7 +44,7 @@ button { color: inherit; }
 /* Driver experience */
 .mobile-shell { display: none; min-height: 100vh; background: radial-gradient(circle at 50% -10%, #17382f 0, transparent 32%), var(--bg); }
 .driver-preview-intro, .driver-preview-guide { display: none; }
-.driver-app { position: relative; width: 100%; max-width: 430px; min-height: 100dvh; margin: 0 auto; background: var(--bg); padding-bottom: max(32px, env(safe-area-inset-bottom, 32px)); -webkit-overflow-scrolling: touch; }
+.driver-app { position: relative; width: 100%; max-width: 430px; min-height: 100dvh; margin: 0 auto; background: var(--bg); padding-bottom: calc(84px + env(safe-area-inset-bottom, 24px)); -webkit-overflow-scrolling: touch; }
 .driver-header { padding: 22px 20px 24px; background: radial-gradient(circle at 75% -45%, #22614d 0, transparent 58%), linear-gradient(180deg, #121b1a, var(--bg)); border-bottom: 1px solid #17231f; }
 .driver-brand-row, .greeting-row, .today-card-head, .section-heading, .log-title, .log-meta, .sheet-title, .fare-row { display: flex; align-items: center; justify-content: space-between; }
 .duty-toggle { display: flex; align-items: center; gap: 7px; height: 31px; padding: 0 11px; border-radius: 99px; border: 1px solid #29313c; background: #171a21; color: #8e95a4; font-size: 11px; font-weight: 700; transition: all 0.2s ease; }
@@ -102,6 +102,151 @@ button { color: inherit; }
 .log-meta b.green { color: #d4f8ec; }
 .log-meta b.gold { color: var(--gold-bright); }
 .log-meta b.red { color: #ff777c; }
+
+/* Mobile Bottom Navigation Bar */
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  height: 64px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: center;
+  background: rgba(13, 16, 23, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid #1e2432;
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  box-sizing: content-box;
+}
+
+.mobile-nav button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  color: #636d7e;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mobile-nav button.active {
+  color: #20d59b;
+}
+
+.mobile-nav button.active .icon {
+  filter: drop-shadow(0 0 6px rgba(32, 213, 155, 0.5));
+}
+
+/* Insight Cards & Range Pills */
+.insight-hero-card {
+  padding: 20px;
+  border: 1px solid #285443;
+  border-radius: 14px;
+  background: radial-gradient(circle at 80% 0, #1d4c3b 0, transparent 48%), #11171a;
+  box-shadow: 0 16px 36px #00000026;
+  margin-bottom: 14px;
+}
+.insight-hero-card > span {
+  display: block;
+  color: #6f807a;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .08em;
+}
+.insight-hero-card > strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 32px;
+  letter-spacing: -.04em;
+  color: #f5f7fa;
+}
+.insight-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #1d2b25;
+}
+.insight-split > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.insight-split small {
+  color: #6b7787;
+  font-size: 10px;
+}
+.insight-split b {
+  font-size: 14px;
+  color: #e5ebf2;
+}
+
+.stats-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+.mini-stat-card {
+  padding: 14px;
+  border: 1px solid #242934;
+  border-radius: 12px;
+  background: #12151c;
+}
+.mini-stat-card span {
+  display: block;
+  color: #636d7d;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+.mini-stat-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 20px;
+  color: #e5ebf2;
+}
+.mini-stat-card small {
+  display: block;
+  margin-top: 4px;
+  color: #7b8595;
+  font-size: 11px;
+}
+
+.range-pills {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: #141720;
+  border: 1px solid #232836;
+  border-radius: 8px;
+}
+.range-pills button {
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #687282;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.range-pills button.active {
+  background: #202634;
+  color: #e6ebf2;
+}
 
 /* Driver tab screens */
 .driver-content.tab-content { padding-top: 20px; }
@@ -494,6 +639,14 @@ tbody tr:hover { background: #161920; }
   }
   .desktop-driver-preview .driver-app::-webkit-scrollbar-thumb:hover {
     background: #3b4656;
+  }
+  .desktop-driver-preview .mobile-nav {
+    position: sticky;
+    bottom: 0;
+    left: auto;
+    transform: none;
+    width: 100%;
+    margin-top: -64px;
   }
   .driver-preview-intro, .driver-preview-guide { display: block; }
   .driver-preview-intro { max-width: 390px; justify-self: end; }
