@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Icon } from "./Icon"
 import { Logo } from "./Logo"
 import { LogTripModal } from "./LogTripModal"
@@ -37,19 +37,22 @@ interface DriverAppProps {
 function DriverTripsTab({
   trips,
   fuelLogs,
-  subView,
-  onSubViewChange,
+  initialSubView = "trips",
   onEditTrip,
   onTogglePayment,
 }: {
   trips: Trip[]
   fuelLogs: FuelLog[]
-  subView: "trips" | "fuel"
-  onSubViewChange: (view: "trips" | "fuel") => void
+  initialSubView?: "trips" | "fuel"
   onEditTrip: (trip: Trip) => void
   onTogglePayment: (trip: Trip, e?: React.MouseEvent) => void
 }) {
+  const [subView, setSubView] = useState<"trips" | "fuel">(initialSubView)
   const [filter, setFilter] = useState<"All" | "Paid" | "Pending" | "VIP">("All")
+
+  useEffect(() => {
+    if (initialSubView) setSubView(initialSubView)
+  }, [initialSubView])
 
   const visibleTrips = trips.filter((trip) => {
     if (filter === "All") return true
@@ -80,14 +83,14 @@ function DriverTripsTab({
         <button
           type="button"
           className={subView === "trips" ? "active" : ""}
-          onClick={() => onSubViewChange("trips")}
+          onClick={() => setSubView("trips")}
         >
           <Icon name="route" size={14} /> Trips ({trips.length})
         </button>
         <button
           type="button"
           className={`fuel-tab ${subView === "fuel" ? "active" : ""}`}
-          onClick={() => onSubViewChange("fuel")}
+          onClick={() => setSubView("fuel")}
         >
           <Icon name="fuel" size={14} /> Fuel Logs ({fuelLogs.length})
         </button>
@@ -879,8 +882,7 @@ export function DriverApp({
             <DriverTripsTab
               trips={allTrips}
               fuelLogs={fuelLogs}
-              subView={tripsTabSubView}
-              onSubViewChange={setTripsTabSubView}
+              initialSubView={tripsTabSubView}
               onEditTrip={(trip) => setEditingTrip(trip)}
               onTogglePayment={handleTogglePaymentStatus}
             />
