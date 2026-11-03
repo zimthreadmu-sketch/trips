@@ -179,36 +179,38 @@ export function LogTripModal({
         aria-modal="true"
         role="dialog"
         aria-label="Log a new trip"
-        style={{ maxHeight: "90vh", overflowY: "auto" }}
+        style={{ maxHeight: "96vh", overflowY: "visible" }}
       >
         <div className="sheet-grabber" />
-        <div className="sheet-title">
+        <div className="sheet-title" style={{ marginBottom: "6px" }}>
           <div>
-            <span className="eyebrow">NEW JOURNEY · MAURITIUS</span>
-            <h2>Log a trip</h2>
+            <span className="eyebrow" style={{ fontSize: "9px" }}>NEW JOURNEY · MAURITIUS</span>
+            <h2 style={{ fontSize: "17px", margin: "2px 0 0" }}>Log a trip</h2>
           </div>
           <button
             className="close-button"
             onClick={onClose}
             aria-label="Close"
             disabled={isLogged}
+            style={{ width: "30px", height: "30px" }}
           >
-            <Icon name="close" />
+            <Icon name="close" size={15} />
           </button>
         </div>
 
         {error && (
-          <div style={{ color: "#ef5359", fontSize: "11px", marginTop: "10px", padding: "8px 12px", background: "#2b1519", borderRadius: "8px" }}>
+          <div style={{ color: "#ef5359", fontSize: "11px", marginBottom: "6px", padding: "6px 10px", background: "#2b1519", borderRadius: "8px" }}>
             {error}
           </div>
         )}
 
         {/* Trip Type Selector */}
-        <div className="trip-selector">
+        <div className="trip-selector" style={{ marginTop: "4px" }}>
           <button
             type="button"
             className={tripType === "regular" ? "active" : ""}
             onClick={() => handleTripTypeChange("regular")}
+            style={{ height: "30px", fontSize: "11px" }}
           >
             Standard Trip
           </button>
@@ -216,26 +218,27 @@ export function LogTripModal({
             type="button"
             className={tripType === "vip" ? "vip active" : ""}
             onClick={() => handleTripTypeChange("vip")}
+            style={{ height: "30px", fontSize: "11px" }}
           >
-            <Icon name="sparkles" size={15} /> VIP Trip
+            <Icon name="sparkles" size={13} /> VIP Trip
           </button>
         </div>
 
         {tripType === "vip" && (
-          <div className="vip-banner">
-            <Icon name="sparkles" size={15} />
+          <div className="vip-banner" style={{ marginTop: "6px", padding: "6px 10px" }}>
+            <Icon name="sparkles" size={14} />
             <span>
-              <strong>VIP Custom Rate Enabled</strong>
-              Enter custom premium fare for this executive transfer
+              <strong>VIP Custom Rate Active</strong>
+              Executive charter transfer
             </span>
           </div>
         )}
 
         {/* Route Fields with Add Location Trigger */}
-        <div className="route-fields">
+        <div className="route-fields" style={{ marginTop: "6px", gap: "6px" }}>
           <label>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-              <span>Origin location</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
+              <span style={{ fontSize: "8px" }}>Origin</span>
               <button
                 type="button"
                 onClick={() => {
@@ -246,20 +249,21 @@ export function LogTripModal({
                   background: "transparent",
                   border: 0,
                   color: "#20d59b",
-                  fontSize: "11px",
+                  fontSize: "10px",
                   fontWeight: "700",
                   cursor: "pointer",
                   padding: 0,
                 }}
               >
-                + Add New
+                + Add
               </button>
             </div>
-            <span className="select-wrap">
-              <Icon name="location" size={17} />
+            <span className="select-wrap" style={{ height: "36px", padding: "0 8px" }}>
+              <Icon name="location" size={14} />
               <select
                 value={origin}
                 onChange={(event) => setOrigin(event.target.value)}
+                style={{ fontSize: "11px" }}
               >
                 {locationNames.map((loc) => (
                   <option key={loc} value={loc}>
@@ -267,17 +271,17 @@ export function LogTripModal({
                   </option>
                 ))}
               </select>
-              <Icon name="chevron" size={15} />
+              <Icon name="chevron" size={13} />
             </span>
           </label>
-          <div className="route-connector">
+          <div className="route-connector" style={{ paddingTop: "18px" }}>
             <span />
-            <Icon name="arrow" size={15} />
+            <Icon name="arrow" size={13} />
             <span />
           </div>
           <label>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-              <span>Destination location</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2px" }}>
+              <span style={{ fontSize: "8px" }}>Destination</span>
               <button
                 type="button"
                 onClick={() => {
@@ -288,20 +292,21 @@ export function LogTripModal({
                   background: "transparent",
                   border: 0,
                   color: "#20d59b",
-                  fontSize: "11px",
+                  fontSize: "10px",
                   fontWeight: "700",
                   cursor: "pointer",
                   padding: 0,
                 }}
               >
-                + Add New
+                + Add
               </button>
             </div>
-            <span className="select-wrap">
-              <Icon name="location" size={17} />
+            <span className="select-wrap" style={{ height: "36px", padding: "0 8px" }}>
+              <Icon name="location" size={14} />
               <select
                 value={destination}
                 onChange={(event) => setDestination(event.target.value)}
+                style={{ fontSize: "11px" }}
               >
                 {locationNames.map((loc) => (
                   <option key={loc} value={loc}>
@@ -309,7 +314,7 @@ export function LogTripModal({
                   </option>
                 ))}
               </select>
-              <Icon name="chevron" size={15} />
+              <Icon name="chevron" size={13} />
             </span>
           </label>
         </div>
@@ -322,37 +327,38 @@ export function LogTripModal({
               background: "#12151e",
               border: "1px solid #20d59b44",
               borderRadius: "10px",
-              padding: "12px",
-              marginBottom: "12px",
+              padding: "10px",
+              marginTop: "6px",
+              marginBottom: "6px",
             }}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-              <span style={{ fontSize: "11px", fontWeight: "700", color: "#20d59b" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <span style={{ fontSize: "10px", fontWeight: "700", color: "#20d59b" }}>
                 Add New {targetLocationField === "origin" ? "Pickup" : "Destination"} Spot
               </span>
               <button
                 type="button"
                 onClick={() => setIsAddingLocation(false)}
-                style={{ background: "transparent", border: 0, color: "#7a8292", cursor: "pointer" }}
+                style={{ background: "transparent", border: 0, color: "#7a8292", cursor: "pointer", fontSize: "11px" }}
               >
                 ✕
               </button>
             </div>
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div style={{ display: "flex", gap: "6px" }}>
               <input
                 type="text"
                 value={newLocationName}
                 onChange={(e) => setNewLocationName(e.target.value)}
-                placeholder="e.g. Trou aux Biches or Belle Mare"
+                placeholder="e.g. Trou aux Biches"
                 style={{
                   flex: 1,
-                  height: "38px",
-                  padding: "0 10px",
+                  height: "34px",
+                  padding: "0 8px",
                   background: "#090a0f",
                   border: "1px solid #28303f",
-                  borderRadius: "8px",
+                  borderRadius: "6px",
                   color: "#f5f7fa",
-                  fontSize: "12px",
+                  fontSize: "11px",
                 }}
                 autoFocus
               />
@@ -360,33 +366,33 @@ export function LogTripModal({
                 type="submit"
                 disabled={isSavingLocation || !newLocationName.trim()}
                 style={{
-                  height: "38px",
-                  padding: "0 14px",
-                  borderRadius: "8px",
+                  height: "34px",
+                  padding: "0 12px",
+                  borderRadius: "6px",
                   background: "#20d59b",
                   color: "#03261d",
                   fontWeight: "700",
-                  fontSize: "12px",
+                  fontSize: "11px",
                   border: 0,
                   cursor: "pointer",
                 }}
               >
-                {isSavingLocation ? "Adding..." : "Add"}
+                {isSavingLocation ? "..." : "Add"}
               </button>
             </div>
           </form>
         )}
 
         {/* Quick Spot Chips */}
-        <div className="quick-spots">
-          <span>POPULAR DESTINATIONS</span>
-          <div>
-            {quickSpots.map((spot) => (
+        <div className="quick-spots" style={{ marginTop: "4px" }}>
+          <div style={{ display: "flex", gap: "5px", overflowX: "auto", scrollbarWidth: "none", marginTop: "2px" }}>
+            {quickSpots.slice(0, 4).map((spot) => (
               <button
                 type="button"
                 key={spot}
                 onClick={() => setDestination(spot)}
                 className={destination === spot ? "active" : ""}
+                style={{ padding: "3px 8px", fontSize: "9px" }}
               >
                 {spot}
               </button>
@@ -395,24 +401,22 @@ export function LogTripModal({
         </div>
 
         {tripType === "vip" && (
-          <label className="text-field">
-            <span>VIP passenger / hotel / account reference</span>
+          <label className="text-field" style={{ marginTop: "6px" }}>
+            <span style={{ fontSize: "8px" }}>VIP passenger / hotel / account ref</span>
             <input
               value={passengerRef}
               onChange={(e) => setPassengerRef(e.target.value)}
-              placeholder="e.g. Hotel Transfer - Constance Belle Mare"
+              placeholder="e.g. Hotel Transfer - Constance"
+              style={{ height: "34px", fontSize: "11px" }}
             />
           </label>
         )}
 
-        {/* DRIVER DIRECT TRIP FARE ENTRY */}
-        <div className="fare-panel">
-          <div style={{ marginBottom: "8px" }}>
-            <span style={{ display: "block", fontSize: "10px", fontWeight: "700", color: "#8991a3", letterSpacing: "0.1em" }}>
-              ENTER TRIP FARE (DRIVER SPECIFIES IN RS)
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px" }}>
-              <span style={{ fontSize: "18px", fontWeight: "800", color: tripType === "vip" ? "#f7c75b" : "#20d59b" }}>
+        {/* DRIVER DIRECT TRIP FARE & PAYMENT ENTRY */}
+        <div className="fare-panel" style={{ marginTop: "6px", padding: "8px 10px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "4px", flex: "0 0 105px", height: "34px", background: "#151821", border: `1px solid ${tripType === "vip" ? "#f5ad3666" : "#20d59b55"}`, borderRadius: "8px", padding: "0 8px" }}>
+              <span style={{ fontSize: "13px", fontWeight: "800", color: tripType === "vip" ? "#f7c75b" : "#20d59b" }}>
                 Rs
               </span>
               <input
@@ -425,132 +429,128 @@ export function LogTripModal({
                 placeholder="0"
                 style={{
                   width: "100%",
-                  height: "44px",
-                  background: "#151821",
-                  border: `1px solid ${tripType === "vip" ? "#f5ad3666" : "#20d59b55"}`,
-                  borderRadius: "10px",
-                  padding: "0 12px",
-                  fontSize: "20px",
+                  height: "100%",
+                  background: "transparent",
+                  border: 0,
+                  outline: 0,
+                  fontSize: "15px",
                   fontWeight: "800",
                   color: "#f5f7fa",
                   fontVariantNumeric: "tabular-nums",
                 }}
               />
             </div>
+
+            {/* Quick Fare Presets in a single sleek flex row */}
+            <div style={{ display: "flex", gap: "4px", flex: 1, overflowX: "auto", scrollbarWidth: "none" }}>
+              {[100, 150, 250, 350, 500].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setFare(preset)}
+                  style={{
+                    flex: "1 0 auto",
+                    padding: "5px 7px",
+                    borderRadius: "6px",
+                    background: Number(fare) === preset ? (tripType === "vip" ? "#f5ad3633" : "#20d59b22") : "#1b1e2a",
+                    border: Number(fare) === preset ? (tripType === "vip" ? "1px solid #f5ad36" : "1px solid #20d59b") : "1px solid #262b3a",
+                    color: Number(fare) === preset ? (tripType === "vip" ? "#f7c75b" : "#20d59b") : "#a2aab8",
+                    fontSize: "10px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    textAlign: "center",
+                  }}
+                >
+                  Rs {preset}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* Quick Fare Presets */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
-            {[100, 150, 250, 350, 500, 800, 1200, 1500].map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => setFare(preset)}
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: "6px",
-                  background: Number(fare) === preset ? "#20d59b22" : "#1b1e2a",
-                  border: Number(fare) === preset ? "1px solid #20d59b" : "1px solid #262b3a",
-                  color: Number(fare) === preset ? "#20d59b" : "#a2aab8",
-                  fontSize: "11px",
-                  fontWeight: "700",
-                  cursor: "pointer",
-                }}
-              >
-                Rs {preset}
-              </button>
-            ))}
-          </div>
+          {/* Payment Method & Payment Status side-by-side in one compact row */}
+          <div style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: "6px", alignItems: "center", paddingTop: "6px", borderTop: "1px solid #1c212e" }}>
+            {/* Payment Method (4 compact pills) */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "2px", background: "#14171f", padding: "2px", borderRadius: "6px" }}>
+              {(["Cash", "Card", "Account", "Juice"] as const).map((method) => (
+                <button
+                  type="button"
+                  key={method}
+                  onClick={() => {
+                    setPayment(method)
+                    if (method === "Account") setPaymentStatus("Pending")
+                    else setPaymentStatus("Paid")
+                  }}
+                  style={{
+                    height: "25px",
+                    border: 0,
+                    borderRadius: "4px",
+                    background: payment === method ? "#28303e" : "transparent",
+                    color: payment === method ? "#ffffff" : "#727a8a",
+                    fontSize: "9px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                  }}
+                >
+                  {method === "Account" ? "Acct" : method}
+                </button>
+              ))}
+            </div>
 
-          <div className="payment-toggle">
-            {(["Cash", "Card", "Account", "Juice"] as const).map((method) => (
-              <button
-                type="button"
-                key={method}
-                className={payment === method ? "active" : ""}
-                onClick={() => {
-                  setPayment(method)
-                  if (method === "Account") {
-                    setPaymentStatus("Pending")
-                  } else {
-                    setPaymentStatus("Paid")
-                  }
-                }}
-              >
-                {method}
-              </button>
-            ))}
-          </div>
-
-          {/* Payment Status (Paid vs Pending) */}
-          <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #1f2533" }}>
-            <span style={{ display: "block", fontSize: "10px", fontWeight: "700", color: "#8991a3", letterSpacing: "0.08em", marginBottom: "8px" }}>
-              PAYMENT COLLECTION STATUS
-            </span>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+            {/* Payment Status (Paid vs Pending) */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px" }}>
               <button
                 type="button"
                 onClick={() => setPaymentStatus("Paid")}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  height: "38px",
-                  borderRadius: "8px",
+                  height: "25px",
+                  borderRadius: "5px",
                   fontWeight: "700",
-                  fontSize: "12px",
+                  fontSize: "10px",
                   cursor: "pointer",
-                  border: paymentStatus === "Paid" ? "1px solid #20d59b" : "1px solid #283040",
-                  background: paymentStatus === "Paid" ? "rgba(32, 213, 155, 0.15)" : "#131620",
+                  border: paymentStatus === "Paid" ? "1px solid #20d59b" : "1px solid #262d3c",
+                  background: paymentStatus === "Paid" ? "rgba(32, 213, 155, 0.2)" : "#131620",
                   color: paymentStatus === "Paid" ? "#20d59b" : "#7d8597",
-                  boxShadow: paymentStatus === "Paid" ? "0 0 12px rgba(32, 213, 155, 0.2)" : "none",
-                  transition: "all 0.15s ease",
                 }}
               >
-                <Icon name="check" size={14} /> Paid
+                ✓ Paid
               </button>
               <button
                 type="button"
                 onClick={() => setPaymentStatus("Pending")}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  height: "38px",
-                  borderRadius: "8px",
+                  height: "25px",
+                  borderRadius: "5px",
                   fontWeight: "700",
-                  fontSize: "12px",
+                  fontSize: "10px",
                   cursor: "pointer",
-                  border: paymentStatus === "Pending" ? "1px solid #f5ad36" : "1px solid #283040",
-                  background: paymentStatus === "Pending" ? "rgba(245, 173, 54, 0.15)" : "#131620",
+                  border: paymentStatus === "Pending" ? "1px solid #f5ad36" : "1px solid #262d3c",
+                  background: paymentStatus === "Pending" ? "rgba(245, 173, 54, 0.2)" : "#131620",
                   color: paymentStatus === "Pending" ? "#f5ad36" : "#7d8597",
-                  boxShadow: paymentStatus === "Pending" ? "0 0 12px rgba(245, 173, 54, 0.2)" : "none",
-                  transition: "all 0.15s ease",
                 }}
               >
-                <Icon name="clock" size={14} /> Pending
+                ⏳ Pend
               </button>
             </div>
           </div>
         </div>
 
+        {/* Action Button: Confirm & Log Trip */}
         <button
           type="button"
           className={`complete-button ${isLogged ? "completed" : ""}`}
           onClick={handleSubmit}
           disabled={isPending || isLogged}
+          style={{ height: "42px", marginTop: "8px", fontSize: "13px" }}
         >
           {isLogged ? (
             <>
-              <Icon name="check" /> Trip logged successfully
+              <Icon name="check" size={15} /> Trip logged successfully
             </>
           ) : isPending ? (
             <>Recording trip...</>
           ) : (
             <>
-              Complete & Log Trip <Icon name="arrow" />
+              Confirm & Log Trip (Rs {fare}) <Icon name="arrow" size={14} />
             </>
           )}
         </button>

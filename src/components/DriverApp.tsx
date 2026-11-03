@@ -905,45 +905,47 @@ export function DriverApp({
           )}
         </section>
 
-        {/* BOTTOM NAVIGATION BAR */}
-        <nav className="mobile-nav" aria-label="Main driver navigation">
-          <button
-            type="button"
-            className={activeTab === "shift" ? "active" : ""}
-            onClick={() => setActiveTab("shift")}
-            aria-label="Shift dashboard tab"
-          >
-            <Icon name="car" />
-            <span>Shift</span>
-          </button>
-          <button
-            type="button"
-            className={activeTab === "trips" ? "active" : ""}
-            onClick={() => setActiveTab("trips")}
-            aria-label="Trips history tab"
-          >
-            <Icon name="route" />
-            <span>Trips</span>
-          </button>
-          <button
-            type="button"
-            className={activeTab === "insights" ? "active" : ""}
-            onClick={() => setActiveTab("insights")}
-            aria-label="Insights tab"
-          >
-            <Icon name="trend" />
-            <span>Insights</span>
-          </button>
-          <button
-            type="button"
-            className={activeTab === "settings" ? "active" : ""}
-            onClick={() => setActiveTab("settings")}
-            aria-label="Settings tab"
-          >
-            <Icon name="settings" />
-            <span>Settings</span>
-          </button>
-        </nav>
+        {/* BOTTOM NAVIGATION BAR (Hidden during modal workflows so buttons are never blocked) */}
+        {!tripSheetOpen && !fuelDrawerOpen && !editingTrip && !driverSwitcherOpen && (
+          <nav className="mobile-nav" aria-label="Main driver navigation">
+            <button
+              type="button"
+              className={activeTab === "shift" ? "active" : ""}
+              onClick={() => setActiveTab("shift")}
+              aria-label="Shift dashboard tab"
+            >
+              <Icon name="car" />
+              <span>Shift</span>
+            </button>
+            <button
+              type="button"
+              className={activeTab === "trips" ? "active" : ""}
+              onClick={() => setActiveTab("trips")}
+              aria-label="Trips history tab"
+            >
+              <Icon name="route" />
+              <span>Trips</span>
+            </button>
+            <button
+              type="button"
+              className={activeTab === "insights" ? "active" : ""}
+              onClick={() => setActiveTab("insights")}
+              aria-label="Insights tab"
+            >
+              <Icon name="trend" />
+              <span>Insights</span>
+            </button>
+            <button
+              type="button"
+              className={activeTab === "settings" ? "active" : ""}
+              onClick={() => setActiveTab("settings")}
+              aria-label="Settings tab"
+            >
+              <Icon name="settings" />
+              <span>Settings</span>
+            </button>
+          </nav>
+        )}
 
         {/* Log Trip Modal (with direct fare entry and on-the-fly location adding) */}
         <LogTripModal
