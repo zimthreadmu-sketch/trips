@@ -44,7 +44,7 @@ button { color: inherit; }
 /* Driver experience */
 .mobile-shell { display: none; min-height: 100vh; background: radial-gradient(circle at 50% -10%, #17382f 0, transparent 32%), var(--bg); }
 .driver-preview-intro, .driver-preview-guide { display: none; }
-.driver-app { position: relative; width: 100%; max-width: 430px; min-height: 100vh; margin: auto; overflow: hidden; background: var(--bg); padding-bottom: 82px; }
+.driver-app { position: relative; width: 100%; max-width: 430px; min-height: 100dvh; margin: 0 auto; background: var(--bg); padding-bottom: max(32px, env(safe-area-inset-bottom, 32px)); -webkit-overflow-scrolling: touch; }
 .driver-header { padding: 22px 20px 24px; background: radial-gradient(circle at 75% -45%, #22614d 0, transparent 58%), linear-gradient(180deg, #121b1a, var(--bg)); border-bottom: 1px solid #17231f; }
 .driver-brand-row, .greeting-row, .today-card-head, .section-heading, .log-title, .log-meta, .sheet-title, .fare-row { display: flex; align-items: center; justify-content: space-between; }
 .duty-toggle { display: flex; align-items: center; gap: 7px; height: 31px; padding: 0 11px; border-radius: 99px; border: 1px solid #29313c; background: #171a21; color: #8e95a4; font-size: 11px; font-weight: 700; transition: all 0.2s ease; }
@@ -102,10 +102,6 @@ button { color: inherit; }
 .log-meta b.green { color: #d4f8ec; }
 .log-meta b.gold { color: var(--gold-bright); }
 .log-meta b.red { color: #ff777c; }
-.mobile-nav { position: absolute; z-index: 10; bottom: 0; left: 0; right: 0; display: grid; grid-template-columns: repeat(4, 1fr); height: 70px; border-top: 1px solid #262a34; background: #101219ef; backdrop-filter: blur(16px); }
-.mobile-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 0; background: transparent; color: #626a79; font-size: 9px; }
-.mobile-nav button.active { color: var(--green-bright); }
-.mobile-nav button.active .icon { filter: drop-shadow(0 0 6px #10b98166); }
 
 /* Driver tab screens */
 .driver-content.tab-content { padding-top: 20px; }
@@ -464,10 +460,41 @@ tbody tr:hover { background: #161920; }
 
 /* Responsive adjustments */
 @media (min-width: 1051px) {
-  .mobile-shell.desktop-driver-preview { display: grid; grid-template-columns: minmax(280px, 1fr) 430px minmax(260px, 1fr); align-items: center; gap: 56px; min-height: 100vh; padding: 40px max(48px, calc((100vw - 1380px) / 2)); background: radial-gradient(circle at 50% 48%, #153e31 0, transparent 27%), radial-gradient(circle at 8% 12%, #172821 0, transparent 29%), #08090d; }
-  .desktop-driver-preview .driver-app { min-height: min(820px, calc(100vh - 80px)); height: min(820px, calc(100vh - 80px)); border: 1px solid #343a46; border-radius: 30px; box-shadow: 0 42px 100px #000b, 0 0 0 7px #101219; overflow-y: auto; scrollbar-width: none; }
-  .desktop-driver-preview .driver-app::-webkit-scrollbar { display: none; }
-  .desktop-driver-preview .mobile-nav { position: sticky; bottom: 0; margin-top: -70px; }
+  .mobile-shell.desktop-driver-preview {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) 430px minmax(260px, 1fr);
+    align-items: start;
+    gap: 48px;
+    min-height: 100vh;
+    padding: max(40px, calc((100vh - 840px) / 2)) max(32px, calc((100vw - 1380px) / 2));
+    background: radial-gradient(circle at 50% 48%, #153e31 0, transparent 27%), radial-gradient(circle at 8% 12%, #172821 0, transparent 29%), #08090d;
+  }
+  .desktop-driver-preview .driver-app {
+    min-height: min(780px, calc(100vh - 80px));
+    max-height: calc(100vh - 80px);
+    border: 1px solid #343a46;
+    border-radius: 32px;
+    box-shadow: 0 42px 100px #000b, 0 0 0 7px #101219;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #242936 transparent;
+    padding-bottom: 24px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .desktop-driver-preview .driver-app::-webkit-scrollbar {
+    width: 4px;
+  }
+  .desktop-driver-preview .driver-app::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .desktop-driver-preview .driver-app::-webkit-scrollbar-thumb {
+    background: #28313e;
+    border-radius: 99px;
+  }
+  .desktop-driver-preview .driver-app::-webkit-scrollbar-thumb:hover {
+    background: #3b4656;
+  }
   .driver-preview-intro, .driver-preview-guide { display: block; }
   .driver-preview-intro { max-width: 390px; justify-self: end; }
   .back-to-admin { display: flex; align-items: center; gap: 8px; margin-bottom: 56px; padding: 0; border: 0; color: #77808f; background: transparent; font-size: 10px; font-weight: 600; cursor: pointer; }
@@ -511,9 +538,15 @@ tbody tr:hover { background: #161920; }
 }
 
 @media (min-width: 431px) and (max-width: 1050px) {
-  .mobile-shell { padding: 28px 0; }
-  .driver-app { min-height: calc(100vh - 56px); max-height: 860px; border: 1px solid #303540; border-radius: 28px; box-shadow: 0 35px 80px #0008; }
-  .mobile-nav { position: absolute; }
+  .mobile-shell { padding: 24px 16px; min-height: 100vh; }
+  .driver-app {
+    min-height: calc(100vh - 48px);
+    border: 1px solid #282e3b;
+    border-radius: 28px;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.6);
+    padding-bottom: max(32px, env(safe-area-inset-bottom, 32px));
+    -webkit-overflow-scrolling: touch;
+  }
 }
 
 @media (max-width: 1260px) and (min-width: 1051px) {

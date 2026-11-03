@@ -231,27 +231,25 @@ export function FleetPulseApp({
 
       {/* 2. Driver App View (DEFAULT ON HOME PAGE) */}
       {currentView === "driver" && (
-        <div className="mobile-shell desktop-driver-preview">
-          <DriverApp
-            desktopPreview={true}
-            onAdminView={() => setCurrentView("admin")}
-            locations={locations}
-            drivers={drivers}
-            activeDriver={activeDriver}
-            onSelectDriver={handleSelectDriver}
-            onUpdateDriver={handleUpdateDriver}
-            onAddDriver={handleAddDriver}
-            onLocationAdded={handleLocationAdded}
-            todayTrips={todayTrips}
-            allTrips={trips}
-            fuelLogs={fuelLogs}
-            ledgerEntries={ledgerEntries}
-            onTripLogged={handleTripLogged}
-            onFuelLogged={handleFuelLogged}
-            baseFare={regularRate}
-            vipMultiplier={multiplier}
-          />
-        </div>
+        <DriverApp
+          desktopPreview={true}
+          onAdminView={() => setCurrentView("admin")}
+          locations={locations}
+          drivers={drivers}
+          activeDriver={activeDriver}
+          onSelectDriver={handleSelectDriver}
+          onUpdateDriver={handleUpdateDriver}
+          onAddDriver={handleAddDriver}
+          onLocationAdded={handleLocationAdded}
+          todayTrips={todayTrips}
+          allTrips={trips}
+          fuelLogs={fuelLogs}
+          ledgerEntries={ledgerEntries}
+          onTripLogged={handleTripLogged}
+          onFuelLogged={handleFuelLogged}
+          baseFare={regularRate}
+          vipMultiplier={multiplier}
+        />
       )}
 
       {/* 3. Admin Dashboard View (ACCESSIBLE ONLY ON DEMAND VIA TOP-RIGHT ADMIN BUTTON) */}
