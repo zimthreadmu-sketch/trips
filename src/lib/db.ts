@@ -391,14 +391,9 @@ export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: bo
       );
     `
 
-    // 2. Remove test driver Jean-Luc if it exists
-    try {
-      await sql`DELETE FROM drivers WHERE id = 'driver_mru_01' OR name ILIKE '%Jean-Luc%';`
-    } catch {
-      // safe ignore
-    }
+    // Strictly non-destructive initialization: NEVER delete existing rows or tables on init
 
-    // 3. Seed Default Locations if locations table is empty
+    // 2. Seed Default Locations if locations table is empty
     const existingLocations = await sql`SELECT count(*) as count FROM locations;`
     if (Number(existingLocations[0]?.count || 0) === 0) {
       for (const loc of SEED_LOCATIONS) {
