@@ -13,20 +13,20 @@ interface LogFuelDrawerProps {
 }
 
 const STATIONS = [
-  "Shell Garage Rosettenville",
-  "Engen Booysens South",
-  "BP Central JHB",
-  "TotalEnergies Southgate",
-  "Sasol Turffontein",
-  "Caltex Crown Mines",
+  "TotalEnergies Port Louis",
+  "Shell Grand Baie",
+  "Engen Ebene Cybercity",
+  "TotalEnergies Curepipe",
+  "Shell SSR International Airport",
+  "Engen Flic en Flac",
+  "IndianOil Rose Hill",
 ]
 
 const QUICK_STATIONS = [
+  "TotalEnergies",
   "Shell",
   "Engen",
-  "BP",
-  "Total",
-  "Sasol",
+  "IndianOil",
 ]
 
 export function LogFuelDrawer({
@@ -36,8 +36,8 @@ export function LogFuelDrawer({
   onFuelLogged,
 }: LogFuelDrawerProps) {
   const [station, setStation] = useState(STATIONS[0])
-  const [costAmount, setCostAmount] = useState<number | string>(350)
-  const [liters, setLiters] = useState<number | string>(15.4)
+  const [costAmount, setCostAmount] = useState<number | string>(1000)
+  const [liters, setLiters] = useState<number | string>(15.1)
   const [odometer, setOdometer] = useState<string>("142850")
   const [isLogged, setIsLogged] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -54,8 +54,8 @@ export function LogFuelDrawer({
 
   const handleLitersChange = (val: number) => {
     setLiters(val)
-    // Approximate petrol rate ~ R22.75 / liter
-    setCostAmount(Math.round(val * 22.75))
+    // Mauritius petrol rate ~ Rs 66.20 / liter
+    setCostAmount(Math.round(val * 66.2))
   }
 
   const handleSubmit = () => {
@@ -77,9 +77,9 @@ export function LogFuelDrawer({
 
     const tempFuelId = `fuel_${Date.now()}`
     const loggedAt = new Date().toISOString()
-    const driverId = activeDriver?.id || "driver_thabo_01"
-    const driverName = activeDriver?.name || "Thabo Mokoena"
-    const vehicle = activeDriver?.vehicle || "Toyota Quantum (GP 482-901)"
+    const driverId = activeDriver?.id || "driver_mru_01"
+    const driverName = activeDriver?.name || "Jean-Luc Laviolette"
+    const vehicle = activeDriver?.vehicle || "Toyota HiAce (4821 DC 18)"
 
     const optimisticFuel: FuelLog = {
       id: tempFuelId,
@@ -143,7 +143,7 @@ export function LogFuelDrawer({
         <div className="sheet-grabber" />
         <div className="sheet-title">
           <div>
-            <span className="eyebrow">REFUEL EXPENSE</span>
+            <span className="eyebrow">REFUEL EXPENSE · MAURITIUS</span>
             <h2>Log Fuel Entry</h2>
           </div>
           <button
@@ -163,33 +163,33 @@ export function LogFuelDrawer({
         )}
 
         <div className="hero-cost-card">
-          <span>TOTAL COST (ZAR)</span>
+          <span>TOTAL COST (MUR)</span>
           <div className="cost-input-row">
-            <span className="currency">R</span>
+            <span className="currency" style={{ fontSize: "20px" }}>Rs</span>
             <input
               type="number"
               inputMode="decimal"
               step="any"
               value={costAmount}
               onChange={(e) => setCostAmount(e.target.value)}
-              placeholder="0.00"
+              placeholder="0"
             />
           </div>
           <small>Recorded at {station.split(" ")[0]} station</small>
         </div>
 
         <div className="quick-presets">
-          {[200, 350, 500, 750, 1000].map((preset) => (
+          {[500, 1000, 1500, 2000, 2500].map((preset) => (
             <button
               type="button"
               key={preset}
               onClick={() => {
                 setCostAmount(preset)
-                setLiters(Number((preset / 22.75).toFixed(1)))
+                setLiters(Number((preset / 66.2).toFixed(1)))
               }}
               className={Number(costAmount) === preset ? "active" : ""}
             >
-              R{preset}
+              Rs {preset}
             </button>
           ))}
         </div>
@@ -238,7 +238,7 @@ export function LogFuelDrawer({
         </label>
 
         <div className="quick-spots">
-          <span>FREQUENT STATIONS</span>
+          <span>FREQUENT BRANDS</span>
           <div>
             {QUICK_STATIONS.map((brand) => (
               <button

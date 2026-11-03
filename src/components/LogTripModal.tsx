@@ -24,11 +24,11 @@ export function LogTripModal({
   onTripLogged,
   onLocationAdded,
   vipMultiplier = 1.8,
-  baseFare = 60,
+  baseFare = 150,
 }: LogTripModalProps) {
   const [tripType, setTripType] = useState<"regular" | "vip">("regular")
-  const [origin, setOrigin] = useState("Booysens")
-  const [destination, setDestination] = useState("Rosettenville")
+  const [origin, setOrigin] = useState("Port Louis")
+  const [destination, setDestination] = useState("Grand Baie")
   const [fare, setFare] = useState<number | string>(baseFare)
   const [passengerRef, setPassengerRef] = useState("")
   const [payment, setPayment] = useState<string>("Cash")
@@ -85,7 +85,7 @@ export function LogTripModal({
   const handleSubmit = () => {
     const numericFare = Number(fare)
     if (isNaN(numericFare) || numericFare <= 0) {
-      setError("Please enter a valid trip fare amount greater than R0.")
+      setError("Please enter a valid trip fare amount greater than Rs 0.")
       return
     }
     if (isPending || isLogged) return
@@ -93,11 +93,11 @@ export function LogTripModal({
 
     const tempTripId = `trip_${Date.now()}`
     const loggedAt = new Date().toISOString()
-    const driverId = activeDriver?.id || "driver_thabo_01"
-    const driverName = activeDriver?.name || "Thabo Mokoena"
-    const driverInitials = activeDriver?.initials || "TM"
-    const vehicle = activeDriver?.vehicle || "Toyota Quantum (GP 482-901)"
-    const note = tripType === "vip" ? (passengerRef.trim() || "VIP Charter") : "Standard Commute"
+    const driverId = activeDriver?.id || "driver_mru_01"
+    const driverName = activeDriver?.name || "Jean-Luc Laviolette"
+    const driverInitials = activeDriver?.initials || "JL"
+    const vehicle = activeDriver?.vehicle || "Toyota HiAce (4821 DC 18)"
+    const note = tripType === "vip" ? (passengerRef.trim() || "VIP Airport / Hotel Charter") : "Standard Commute"
 
     // Build optimistic trip
     const optimisticTrip: Trip = {
@@ -155,12 +155,12 @@ export function LogTripModal({
     })
   }
 
-  // Location list with defaults
+  // Location list with defaults in Mauritius
   const locationNames = locations.length > 0
     ? locations.map((l) => l.name)
-    : ["Booysens", "Rosettenville", "JHB CBD", "Southgate", "Sandton", "Rosebank", "Gold Reef City"]
+    : ["Port Louis", "Grand Baie", "Flic en Flac", "Curepipe", "Ebene Cybercity", "SSR International Airport", "Rose Hill", "Tamarin"]
 
-  const quickSpots = ["Booysens", "Rosettenville", "JHB CBD", "Southgate"].filter(
+  const quickSpots = ["Port Louis", "Grand Baie", "Ebene Cybercity", "SSR International Airport"].filter(
     (s) => s !== origin
   )
 
@@ -181,7 +181,7 @@ export function LogTripModal({
         <div className="sheet-grabber" />
         <div className="sheet-title">
           <div>
-            <span className="eyebrow">NEW JOURNEY</span>
+            <span className="eyebrow">NEW JOURNEY · MAURITIUS</span>
             <h2>Log a trip</h2>
           </div>
           <button
@@ -223,7 +223,7 @@ export function LogTripModal({
             <Icon name="sparkles" size={15} />
             <span>
               <strong>VIP Custom Rate Enabled</strong>
-              Enter custom premium fare for this executive charter
+              Enter custom premium fare for this executive transfer
             </span>
           </div>
         )}
@@ -325,7 +325,7 @@ export function LogTripModal({
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
               <span style={{ fontSize: "11px", fontWeight: "700", color: "#20d59b" }}>
-                Add New {targetLocationField === "origin" ? "Pickup" : "Destination"} Location
+                Add New {targetLocationField === "origin" ? "Pickup" : "Destination"} Spot
               </span>
               <button
                 type="button"
@@ -340,7 +340,7 @@ export function LogTripModal({
                 type="text"
                 value={newLocationName}
                 onChange={(e) => setNewLocationName(e.target.value)}
-                placeholder="e.g. Melrose Arch or OR Tambo"
+                placeholder="e.g. Trou aux Biches or Belle Mare"
                 style={{
                   flex: 1,
                   height: "38px",
@@ -376,7 +376,7 @@ export function LogTripModal({
 
         {/* Quick Spot Chips */}
         <div className="quick-spots">
-          <span>QUICK SPOTS</span>
+          <span>POPULAR DESTINATIONS</span>
           <div>
             {quickSpots.map((spot) => (
               <button
@@ -393,11 +393,11 @@ export function LogTripModal({
 
         {tripType === "vip" && (
           <label className="text-field">
-            <span>VIP passenger / account reference</span>
+            <span>VIP passenger / hotel / account reference</span>
             <input
               value={passengerRef}
               onChange={(e) => setPassengerRef(e.target.value)}
-              placeholder="e.g. Executive Charter - Dr. Adeleke"
+              placeholder="e.g. Hotel Transfer - Constance Belle Mare"
             />
           </label>
         )}
@@ -406,11 +406,11 @@ export function LogTripModal({
         <div className="fare-panel">
           <div style={{ marginBottom: "8px" }}>
             <span style={{ display: "block", fontSize: "10px", fontWeight: "700", color: "#8991a3", letterSpacing: "0.1em" }}>
-              ENTER TRIP FARE (DRIVER SPECIFIES AMOUNT)
+              ENTER TRIP FARE (DRIVER SPECIFIES IN RS)
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px" }}>
-              <span style={{ fontSize: "20px", fontWeight: "800", color: tripType === "vip" ? "#f7c75b" : "#20d59b" }}>
-                R
+              <span style={{ fontSize: "18px", fontWeight: "800", color: tripType === "vip" ? "#f7c75b" : "#20d59b" }}>
+                Rs
               </span>
               <input
                 type="number"
@@ -419,7 +419,7 @@ export function LogTripModal({
                 min="0"
                 value={fare}
                 onChange={(e) => setFare(e.target.value)}
-                placeholder="0.00"
+                placeholder="0"
                 style={{
                   width: "100%",
                   height: "44px",
@@ -438,7 +438,7 @@ export function LogTripModal({
 
           {/* Quick Fare Presets */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
-            {[60, 90, 120, 150, 200, 350, 500].map((preset) => (
+            {[100, 150, 250, 350, 500, 800, 1200, 1500].map((preset) => (
               <button
                 key={preset}
                 type="button"
@@ -454,13 +454,13 @@ export function LogTripModal({
                   cursor: "pointer",
                 }}
               >
-                R{preset}
+                Rs {preset}
               </button>
             ))}
           </div>
 
           <div className="payment-toggle">
-            {(["Cash", "Card", "Account"] as const).map((method) => (
+            {(["Cash", "Card", "Account", "Juice"] as const).map((method) => (
               <button
                 type="button"
                 key={method}

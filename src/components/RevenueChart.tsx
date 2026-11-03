@@ -43,11 +43,11 @@ export function RevenueChart({
   return (
     <div className="revenue-chart">
       <div className="chart-y-labels">
-        <span>R 8k</span>
-        <span>R 6k</span>
-        <span>R 4k</span>
-        <span>R 2k</span>
-        <span>R 0</span>
+        <span>Rs 8k</span>
+        <span>Rs 6k</span>
+        <span>Rs 4k</span>
+        <span>Rs 2k</span>
+        <span>Rs 0</span>
       </div>
       <svg
         viewBox="0 0 770 245"
@@ -94,9 +94,9 @@ export function RevenueChart({
         style={{ left: `${Math.min(78, 4 + safeIndex * 3.8)}%` }}
       >
         <span>{currentDay.toUpperCase()} 2026</span>
-        <strong>R {currentRevenue.toLocaleString()}</strong>
+        <strong>Rs {currentRevenue.toLocaleString()}</strong>
         <small>
-          <i /> Revenue &nbsp; <b>R {currentFuel.toLocaleString()} fuel</b>
+          <i /> Revenue &nbsp; <b>Rs {currentFuel.toLocaleString()} fuel</b>
         </small>
       </div>
       <div className="chart-x-labels">

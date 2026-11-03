@@ -113,22 +113,23 @@ export interface AnalyticsData {
 // ==========================================
 
 export const SEED_LOCATIONS: Location[] = [
-  { id: "loc_booysens", name: "Booysens", is_active: true, order_priority: 1, created_at: new Date().toISOString() },
-  { id: "loc_rosettenville", name: "Rosettenville", is_active: true, order_priority: 2, created_at: new Date().toISOString() },
-  { id: "loc_jhbcbd", name: "JHB CBD", is_active: true, order_priority: 3, created_at: new Date().toISOString() },
-  { id: "loc_southgate", name: "Southgate", is_active: true, order_priority: 4, created_at: new Date().toISOString() },
-  { id: "loc_sandton", name: "Sandton", is_active: true, order_priority: 5, created_at: new Date().toISOString() },
-  { id: "loc_rosebank", name: "Rosebank", is_active: true, order_priority: 6, created_at: new Date().toISOString() },
-  { id: "loc_goldreef", name: "Gold Reef City", is_active: true, order_priority: 7, created_at: new Date().toISOString() },
+  { id: "loc_port_louis", name: "Port Louis", is_active: true, order_priority: 1, created_at: new Date().toISOString() },
+  { id: "loc_grand_baie", name: "Grand Baie", is_active: true, order_priority: 2, created_at: new Date().toISOString() },
+  { id: "loc_flic_en_flac", name: "Flic en Flac", is_active: true, order_priority: 3, created_at: new Date().toISOString() },
+  { id: "loc_curepipe", name: "Curepipe", is_active: true, order_priority: 4, created_at: new Date().toISOString() },
+  { id: "loc_ebene", name: "Ebene Cybercity", is_active: true, order_priority: 5, created_at: new Date().toISOString() },
+  { id: "loc_airport", name: "SSR International Airport", is_active: true, order_priority: 6, created_at: new Date().toISOString() },
+  { id: "loc_rose_hill", name: "Rose Hill", is_active: true, order_priority: 7, created_at: new Date().toISOString() },
+  { id: "loc_tamarin", name: "Tamarin", is_active: true, order_priority: 8, created_at: new Date().toISOString() },
 ]
 
 export const SEED_DRIVER: Driver = {
-  id: "driver_thabo_01",
-  name: "Thabo Mokoena",
-  phone: "+27 82 459 1024",
+  id: "driver_mru_01",
+  name: "Jean-Luc Laviolette",
+  phone: "+230 5842 1920",
   avatar_color: "#10B981",
-  initials: "TM",
-  vehicle: "Toyota Quantum (GP 482-901)",
+  initials: "JL",
+  vehicle: "Toyota HiAce (4821 DC 18)",
   status: "ACTIVE",
   created_at: new Date().toISOString(),
 }

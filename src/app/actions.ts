@@ -40,7 +40,7 @@ function formatDisplayTime(isoString: string): string {
     if (isToday) return timeStr
     if (isYesterday) return `Yesterday · ${timeStr}`
 
-    return `${d.toLocaleDateString("en-ZA", { month: "short", day: "numeric" })} · ${timeStr}`
+    return `${d.toLocaleDateString("en-MU", { month: "short", day: "numeric" })} · ${timeStr}`
   } catch {
     return isoString
   }
@@ -53,14 +53,14 @@ function buildLedgerEntries(trips: Trip[], fuels: FuelLog[]): LedgerEntry[] {
     time: formatDisplayTime(t.logged_at),
     title: `${t.origin_name} → ${t.destination_name}`,
     detail: t.trip_type === "VIP" ? "VIP Trip" : "Regular trip",
-    amount: `R ${Number(t.fare).toFixed(2)}`,
+    amount: `Rs ${Number(t.fare).toFixed(2)}`,
     numericAmount: Number(t.fare),
     tone: t.trip_type === "VIP" ? "gold" : "green",
     status: t.status,
     timestamp: t.logged_at,
-    driver_name: t.driver_name || "Thabo Mokoena",
-    driver_initials: t.driver_initials || "TM",
-    vehicle: t.vehicle || "Toyota Quantum (GP 482-901)",
+    driver_name: t.driver_name || "Jean-Luc Laviolette",
+    driver_initials: t.driver_initials || "JL",
+    vehicle: t.vehicle || "Toyota HiAce (4821 DC 18)",
   }))
 
   const fuelEntries: LedgerEntry[] = fuels.map((f) => ({
@@ -69,12 +69,12 @@ function buildLedgerEntries(trips: Trip[], fuels: FuelLog[]): LedgerEntry[] {
     time: formatDisplayTime(f.logged_at),
     title: f.station_name,
     detail: `Fuel refill · ${f.liters}L`,
-    amount: `−R ${Number(f.cost_amount).toFixed(2)}`,
+    amount: `−Rs ${Number(f.cost_amount).toFixed(2)}`,
     numericAmount: -Number(f.cost_amount),
     tone: "red",
     timestamp: f.logged_at,
-    driver_name: f.driver_name || "Thabo Mokoena",
-    vehicle: f.vehicle || "Toyota Quantum (GP 482-901)",
+    driver_name: f.driver_name || "Jean-Luc Laviolette",
+    vehicle: f.vehicle || "Toyota HiAce (4821 DC 18)",
   }))
 
   return [...tripEntries, ...fuelEntries].sort(
@@ -306,10 +306,10 @@ export async function logTrip(data: LogTripInput): Promise<{ success: boolean; t
     const loggedAt = data.loggedAt || new Date().toISOString()
     const status = data.status || "Approved"
     const fare = Number(data.fare)
-    const driverId = data.driverId || "driver_thabo_01"
-    const driverName = data.driverName || "Thabo Mokoena"
+    const driverId = data.driverId || "driver_mru_01"
+    const driverName = data.driverName || "Jean-Luc Laviolette"
     const driverInitials = data.driverInitials || computeInitials(driverName)
-    const vehicle = data.vehicle || "Toyota Quantum (GP 482-901)"
+    const vehicle = data.vehicle || "Toyota HiAce (4821 DC 18)"
     const note = data.note ? data.note.trim() : null
 
     const sql = getDbClient()
@@ -386,9 +386,9 @@ export async function logFuel(data: LogFuelInput): Promise<{ success: boolean; f
     const cost = Number(data.costAmount)
     const liters = Number(data.liters)
     const odometer = data.odometer ? Number(data.odometer) : null
-    const driverId = data.driverId || "driver_thabo_01"
-    const driverName = data.driverName || "Thabo Mokoena"
-    const vehicle = data.vehicle || "Toyota Quantum (GP 482-901)"
+    const driverId = data.driverId || "driver_mru_01"
+    const driverName = data.driverName || "Jean-Luc Laviolette"
+    const vehicle = data.vehicle || "Toyota HiAce (4821 DC 18)"
 
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {

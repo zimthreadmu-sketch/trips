@@ -111,7 +111,7 @@ function DriverTrips({ trips }: { trips: Trip[] }) {
                   </small>
                 </div>
                 <div className="trip-history-fare">
-                  <strong>R {Number(trip.fare).toFixed(2)}</strong>
+                  <strong>Rs {Number(trip.fare).toFixed(2)}</strong>
                   <span style={{ fontSize: "10px", color: "#697184" }}>{trip.status}</span>
                 </div>
               </article>
@@ -152,10 +152,10 @@ function DriverInsights({ trips, fuelLogs }: { trips: Trip[]; fuelLogs: FuelLog[
 
       <div className="earnings-hero-card">
         <span>TOTAL NET EARNINGS</span>
-        <strong>R {netEarnings.toLocaleString()}</strong>
+        <strong>Rs {netEarnings.toLocaleString()}</strong>
         <div className="earnings-hero-foot">
-          <span>Gross: R {totalRevenue.toLocaleString()}</span>
-          <span>Fuel: -R {totalFuel.toLocaleString()}</span>
+          <span>Gross: Rs {totalRevenue.toLocaleString()}</span>
+          <span>Fuel: -Rs {totalFuel.toLocaleString()}</span>
         </div>
       </div>
 
@@ -402,7 +402,7 @@ export function DriverApp({
             <div>
               <span className="eyebrow">
                 {activeTab === "shift"
-                  ? new Date().toLocaleDateString("en-ZA", {
+                  ? new Date().toLocaleDateString("en-MU", {
                       weekday: "long",
                       day: "numeric",
                       month: "long",
@@ -474,17 +474,17 @@ export function DriverApp({
                 <div className="mobile-metrics">
                   <div>
                     <span>Gross</span>
-                    <strong>R {todayRev.toLocaleString()}</strong>
+                    <strong>Rs {todayRev.toLocaleString()}</strong>
                   </div>
                   <div>
                     <span>Fuel</span>
                     <strong className="danger">
-                      {todayFuel > 0 ? `−R ${todayFuel.toLocaleString()}` : "R 0"}
+                      {todayFuel > 0 ? `−Rs ${todayFuel.toLocaleString()}` : "Rs 0"}
                     </strong>
                   </div>
                   <div>
                     <span>Net</span>
-                    <strong className="success">R {todayNet.toLocaleString()}</strong>
+                    <strong className="success">Rs {todayNet.toLocaleString()}</strong>
                   </div>
                 </div>
               </div>

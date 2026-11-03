@@ -119,7 +119,7 @@ export function SettingsDrawer({
             </span>
             <div>
               <strong>Service locations</strong>
-              <p>{locations.length} active zones across Johannesburg</p>
+              <p>{locations.length} active zones across Mauritius</p>
             </div>
           </div>
           <label className="drawer-field">
@@ -128,7 +128,7 @@ export function SettingsDrawer({
               <input
                 value={newZone}
                 onChange={(event) => setNewZone(event.target.value)}
-                placeholder="e.g. Booysens South or Melrose Arch"
+                placeholder="e.g. Trou aux Biches or Belle Mare"
                 onKeyDown={(e) => e.key === "Enter" && handleAddZone()}
               />
               <button
@@ -166,7 +166,7 @@ export function SettingsDrawer({
               <small>Default commuter rate</small>
             </span>
             <div className="currency-input">
-              R{" "}
+              Rs{" "}
               <input
                 type="number"
                 value={regularRate}
@@ -194,10 +194,10 @@ export function SettingsDrawer({
           <div className="rate-preview">
             <span>EXAMPLE FARE</span>
             <div>
-              <span>Booysens → Rosettenville</span>
-              <strong>R {exampleVipFare}</strong>
+              <span>Port Louis → Grand Baie</span>
+              <strong>Rs {exampleVipFare}</strong>
             </div>
-            <small>VIP rate based on current multiplier ({multiplier}× R{regularRate})</small>
+            <small>VIP rate based on current multiplier ({multiplier}× Rs {regularRate})</small>
           </div>
         </div>
 

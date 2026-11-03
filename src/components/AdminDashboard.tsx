@@ -117,8 +117,8 @@ export function AdminDashboard({
         from: t.origin_name,
         to: t.destination_name,
         note: t.note || (t.trip_type === "VIP" ? "VIP Client Transfer" : "Standard Commute"),
-        fuel: `−R ${approxFuel}.00`,
-        net: `R ${fare.toFixed(2)}`,
+        fuel: `−Rs ${approxFuel}.00`,
+        net: `Rs ${fare.toFixed(2)}`,
         status: (statusOverrides[t.id] || t.status) as "Approved" | "Pending" | "Rejected",
         color,
       }
@@ -245,19 +245,19 @@ export function AdminDashboard({
         <section className="kpi-grid">
           <KpiCard
             label="TOTAL GROSS REVENUE"
-            value={`R ${metrics.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+            value={`Rs ${metrics.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
             icon="trend"
             spark="green"
           >
             <span className="kpi-tag positive">
-              <Icon name="trend" size={13} /> {metrics.todayRevenue > 0 ? `+R${metrics.todayRevenue.toLocaleString()} today` : "Live telemetry"}
+              <Icon name="trend" size={13} /> {metrics.todayRevenue > 0 ? `+Rs ${metrics.todayRevenue.toLocaleString()} today` : "Live telemetry"}
             </span>
             <small>Total customer fares collected</small>
           </KpiCard>
 
           <KpiCard
             label="TOTAL FUEL EXPENSE"
-            value={`R ${metrics.fuelExpense.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+            value={`Rs ${metrics.fuelExpense.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
             icon="fuel"
             spark="red"
           >
@@ -269,7 +269,7 @@ export function AdminDashboard({
 
           <KpiCard
             label="NET OPERATING PROFIT"
-            value={`R ${metrics.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+            value={`Rs ${metrics.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
             icon="check"
             tone="featured"
             spark="green"
@@ -353,19 +353,19 @@ export function AdminDashboard({
             <div className="corridor-list">
               {[
                 {
-                  route: "Booysens ⇄ Rosettenville",
-                  trips: trips.filter((t) => t.origin_name.includes("Booysens") || t.destination_name.includes("Booysens")).length,
-                  pct: "Main commuter hub",
+                  route: "Port Louis ⇄ Grand Baie",
+                  trips: trips.filter((t) => t.origin_name.includes("Port Louis") || t.destination_name.includes("Port Louis")).length,
+                  pct: "Main tourist & coastal hub",
                 },
                 {
-                  route: "Rosettenville ⇄ JHB Central",
-                  trips: trips.filter((t) => t.origin_name.includes("Rosettenville") || t.destination_name.includes("Rosettenville")).length,
-                  pct: "Urban corridor",
+                  route: "Flic en Flac ⇄ Ebene",
+                  trips: trips.filter((t) => t.origin_name.includes("Ebene") || t.destination_name.includes("Ebene")).length,
+                  pct: "Cybercity business corridor",
                 },
                 {
-                  route: "Rosebank ⇄ Sandton VIP",
+                  route: "SSR Airport ⇄ Grand Baie VIP",
                   trips: trips.filter((t) => t.trip_type === "VIP").length,
-                  pct: "Executive transfers",
+                  pct: "Executive hotel transfers",
                 },
               ].map((c) => (
                 <div className="corridor-row" key={c.route}>

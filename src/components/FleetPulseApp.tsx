@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { DriverApp } from "./DriverApp"
 import { AdminDashboard } from "./AdminDashboard"
+import DriverOnboardingModal from "./DriverOnboardingModal"
 import type { Location, Driver, Trip, FuelLog, LedgerEntry, DashboardMetrics } from "@/lib/db"
 
 interface FleetPulseAppProps {
@@ -27,7 +28,8 @@ export function FleetPulseApp({
   initialLedgerEntries,
   initialMetrics,
 }: FleetPulseAppProps) {
-  const [desktopView, setDesktopView] = useState<"admin" | "driver">("admin")
+  // DEFAULT IS STRICTLY DRIVER VIEW — NEVER ADMIN ON HOME PAGE
+  const [currentView, setCurrentView] = useState<"driver" | "admin">("driver")
   const [locations, setLocations] = useState<Location[]>(initialLocations)
   const [drivers, setDrivers] = useState<Driver[]>(
     initialDrivers && initialDrivers.length > 0 ? initialDrivers : [initialActiveDriver]
@@ -38,27 +40,46 @@ export function FleetPulseApp({
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>(initialFuelLogs)
   const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(initialLedgerEntries)
   const [metrics, setMetrics] = useState<DashboardMetrics>(initialMetrics)
-  const [regularRate, setRegularRate] = useState(60)
+  const [regularRate, setRegularRate] = useState(150)
   const [multiplier, setMultiplier] = useState(1.8)
 
-  // Hydrate active driver from localStorage
+  // First-time onboarding state
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  // On first startup: check if device knows the driver in phone cache
   useEffect(() => {
     try {
-      const savedId = localStorage.getItem("fleetpulse_active_driver_id")
-      if (savedId) {
-        const found = drivers.find((d) => d.id === savedId)
+      const isBound = localStorage.getItem("fleetpulse_driver_bound")
+      const savedDriverId = localStorage.getItem("fleetpulse_active_driver_id")
+
+      if (!isBound || !savedDriverId) {
+        setShowOnboarding(true)
+      } else {
+        const found = drivers.find((d) => d.id === savedDriverId)
         if (found) {
           setActiveDriver(found)
         }
       }
     } catch {
-      // safe ignore localStorage errors
+      // safe fallback
     }
   }, [drivers])
+
+  const handleOnboardingComplete = (driver: Driver) => {
+    setActiveDriver(driver)
+    setShowOnboarding(false)
+    try {
+      localStorage.setItem("fleetpulse_driver_bound", "true")
+      localStorage.setItem("fleetpulse_active_driver_id", driver.id)
+    } catch {
+      // safe ignore
+    }
+  }
 
   const handleSelectDriver = (drv: Driver) => {
     setActiveDriver(drv)
     try {
+      localStorage.setItem("fleetpulse_driver_bound", "true")
       localStorage.setItem("fleetpulse_active_driver_id", drv.id)
     } catch {
       // safe ignore
@@ -74,6 +95,7 @@ export function FleetPulseApp({
     setDrivers((prev) => [...prev, newDriver])
     setActiveDriver(newDriver)
     try {
+      localStorage.setItem("fleetpulse_driver_bound", "true")
       localStorage.setItem("fleetpulse_active_driver_id", newDriver.id)
     } catch {
       // safe ignore
@@ -85,14 +107,14 @@ export function FleetPulseApp({
     setTrips((prev) => [newTrip, ...prev])
     setTodayTrips((prev) => [newTrip, ...prev])
 
-    // Prepend to ledger entries
+    // Prepend to ledger entries with Rs currency
     const newLedgerEntry: LedgerEntry = {
       id: newTrip.id,
       type: "trip",
       time: "Just now",
       title: `${newTrip.origin_name} → ${newTrip.destination_name}`,
       detail: newTrip.trip_type === "VIP" ? "VIP Trip" : "Regular trip",
-      amount: `R ${Number(newTrip.fare).toFixed(2)}`,
+      amount: `Rs ${Number(newTrip.fare).toFixed(2)}`,
       numericAmount: Number(newTrip.fare),
       tone: newTrip.trip_type === "VIP" ? "gold" : "green",
       status: newTrip.status,
@@ -131,14 +153,14 @@ export function FleetPulseApp({
   const handleFuelLogged = (newFuel: FuelLog) => {
     setFuelLogs((prev) => [newFuel, ...prev])
 
-    // Prepend to ledger entries
+    // Prepend to ledger entries with Rs currency
     const newLedgerEntry: LedgerEntry = {
       id: newFuel.id,
       type: "fuel",
       time: "Just now",
       title: newFuel.station_name,
       detail: `Fuel refill · ${newFuel.liters}L`,
-      amount: `−R ${Number(newFuel.cost_amount).toFixed(2)}`,
+      amount: `−Rs ${Number(newFuel.cost_amount).toFixed(2)}`,
       numericAmount: -Number(newFuel.cost_amount),
       tone: "red",
       timestamp: newFuel.logged_at,
@@ -174,39 +196,43 @@ export function FleetPulseApp({
 
   return (
     <>
-      {/* Driver App View */}
-      <div
-        className={
-          desktopView === "admin"
-            ? "mobile-shell"
-            : "mobile-shell desktop-driver-preview"
-        }
-      >
-        <DriverApp
-          desktopPreview={desktopView === "driver"}
-          onAdminView={() => setDesktopView("admin")}
-          locations={locations}
+      {/* 1. First-time Startup Onboarding Gate */}
+      {showOnboarding && (
+        <DriverOnboardingModal
           drivers={drivers}
-          activeDriver={activeDriver}
-          onSelectDriver={handleSelectDriver}
-          onUpdateDriver={handleUpdateDriver}
-          onAddDriver={handleAddDriver}
-          onLocationAdded={handleLocationAdded}
-          todayTrips={todayTrips}
-          allTrips={trips}
-          fuelLogs={fuelLogs}
-          ledgerEntries={ledgerEntries}
-          onTripLogged={handleTripLogged}
-          onFuelLogged={handleFuelLogged}
-          baseFare={regularRate}
-          vipMultiplier={multiplier}
+          onComplete={handleOnboardingComplete}
         />
-      </div>
+      )}
 
-      {/* Admin Dashboard View */}
-      {desktopView === "admin" && (
+      {/* 2. Driver App View (DEFAULT ON HOME PAGE) */}
+      {currentView === "driver" && (
+        <div className="mobile-shell desktop-driver-preview">
+          <DriverApp
+            desktopPreview={true}
+            onAdminView={() => setCurrentView("admin")}
+            locations={locations}
+            drivers={drivers}
+            activeDriver={activeDriver}
+            onSelectDriver={handleSelectDriver}
+            onUpdateDriver={handleUpdateDriver}
+            onAddDriver={handleAddDriver}
+            onLocationAdded={handleLocationAdded}
+            todayTrips={todayTrips}
+            allTrips={trips}
+            fuelLogs={fuelLogs}
+            ledgerEntries={ledgerEntries}
+            onTripLogged={handleTripLogged}
+            onFuelLogged={handleFuelLogged}
+            baseFare={regularRate}
+            vipMultiplier={multiplier}
+          />
+        </div>
+      )}
+
+      {/* 3. Admin Dashboard View (ACCESSIBLE ONLY ON DEMAND VIA TOP-RIGHT ADMIN BUTTON) */}
+      {currentView === "admin" && (
         <AdminDashboard
-          onDriverView={() => setDesktopView("driver")}
+          onDriverView={() => setCurrentView("driver")}
           metrics={metrics}
           trips={trips}
           fuelLogs={fuelLogs}
