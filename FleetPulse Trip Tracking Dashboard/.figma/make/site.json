@@ -1,0 +1,10 @@
+{
+  "description": "Track driver trips, fuel expenses, and earnings while giving fleet managers real-time revenue insights, route analytics, and tools to oversee operations.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
