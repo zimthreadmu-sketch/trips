@@ -123,18 +123,7 @@ export const SEED_LOCATIONS: Location[] = [
   { id: "loc_tamarin", name: "Tamarin", is_active: true, order_priority: 8, created_at: new Date().toISOString() },
 ]
 
-export const SEED_DRIVER: Driver = {
-  id: "driver_mru_01",
-  name: "Jean-Luc Laviolette",
-  phone: "+230 5842 1920",
-  avatar_color: "#10B981",
-  initials: "JL",
-  vehicle: "Toyota HiAce (4821 DC 18)",
-  status: "ACTIVE",
-  created_at: new Date().toISOString(),
-}
-
-// ABSOLUTELY ZERO SAMPLE TRIPS OR FUEL LOGS FOR LIVE PRODUCTION
+// ABSOLUTELY ZERO SAMPLE DRIVERS, TRIPS OR FUEL LOGS FOR LIVE PRODUCTION
 export const SEED_TRIPS: Trip[] = []
 export const SEED_FUEL: FuelLog[] = []
 
@@ -165,7 +154,7 @@ function getDriverColor(index: number): string {
 
 class InMemoryStore {
   locations: Location[] = [...SEED_LOCATIONS]
-  drivers: Driver[] = [SEED_DRIVER]
+  drivers: Driver[] = []
   trips: Trip[] = []
   fuelLogs: FuelLog[] = []
   pricingSettings: PricingSetting[] = [...SEED_PRICING_SETTINGS]
@@ -186,7 +175,7 @@ class InMemoryStore {
       phone: phone || "",
       avatar_color: getDriverColor(this.drivers.length),
       initials: computeInitials(name),
-      vehicle: vehicle.trim() || "Toyota Quantum (GP 482-901)",
+      vehicle: vehicle.trim() || "Toyota HiAce (4821 DC 18)",
       status: "ACTIVE",
       created_at: new Date().toISOString(),
     }
@@ -216,13 +205,13 @@ class InMemoryStore {
   }
 
   addTrip(trip: Omit<Trip, "id" | "logged_at"> & { id?: string; logged_at?: string }): Trip {
-    const driver = this.drivers.find((d) => d.id === trip.driver_id) || this.drivers[0] || SEED_DRIVER
+    const driver = this.drivers.find((d) => d.id === trip.driver_id) || this.drivers[0] || null
     const newTrip: Trip = {
       id: trip.id || `trip_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      driver_id: trip.driver_id || driver.id,
-      driver_name: trip.driver_name || driver.name,
-      driver_initials: trip.driver_initials || driver.initials,
-      vehicle: trip.vehicle || driver.vehicle,
+      driver_id: trip.driver_id || driver?.id || "",
+      driver_name: trip.driver_name || driver?.name || "Driver",
+      driver_initials: trip.driver_initials || driver?.initials || "DR",
+      vehicle: trip.vehicle || driver?.vehicle || "Toyota HiAce (4821 DC 18)",
       origin_name: trip.origin_name,
       destination_name: trip.destination_name,
       trip_type: trip.trip_type,
@@ -237,12 +226,12 @@ class InMemoryStore {
   }
 
   addFuelLog(fuel: Omit<FuelLog, "id" | "logged_at"> & { id?: string; logged_at?: string }): FuelLog {
-    const driver = this.drivers.find((d) => d.id === fuel.driver_id) || this.drivers[0] || SEED_DRIVER
+    const driver = this.drivers.find((d) => d.id === fuel.driver_id) || this.drivers[0] || null
     const newFuel: FuelLog = {
       id: fuel.id || `fuel_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      driver_id: fuel.driver_id || driver.id,
-      driver_name: fuel.driver_name || driver.name,
-      vehicle: fuel.vehicle || driver.vehicle,
+      driver_id: fuel.driver_id || driver?.id || "",
+      driver_name: fuel.driver_name || driver?.name || "Driver",
+      vehicle: fuel.vehicle || driver?.vehicle || "Toyota HiAce (4821 DC 18)",
       station_name: fuel.station_name,
       cost_amount: Number(fuel.cost_amount) || 0,
       liters: Number(fuel.liters) || 0,
@@ -261,6 +250,7 @@ class InMemoryStore {
   }
 
   purgeData(): void {
+    this.drivers = this.drivers.filter(d => d.id !== "driver_mru_01" && !d.name.toLowerCase().includes("jean-luc"))
     this.trips = []
     this.fuelLogs = []
   }
@@ -401,14 +391,11 @@ export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: bo
       );
     `
 
-    // 2. Seed Default Driver if drivers table is empty
-    const existingDrivers = await sql`SELECT count(*) as count FROM drivers;`
-    if (Number(existingDrivers[0]?.count || 0) === 0) {
-      await sql`
-        INSERT INTO drivers (id, name, phone, avatar_color, initials, vehicle, status, created_at)
-        VALUES (${SEED_DRIVER.id}, ${SEED_DRIVER.name}, ${SEED_DRIVER.phone}, ${SEED_DRIVER.avatar_color}, ${SEED_DRIVER.initials}, ${SEED_DRIVER.vehicle}, ${SEED_DRIVER.status}, ${SEED_DRIVER.created_at})
-        ON CONFLICT (id) DO NOTHING;
-      `
+    // 2. Remove test driver Jean-Luc if it exists
+    try {
+      await sql`DELETE FROM drivers WHERE id = 'driver_mru_01' OR name ILIKE '%Jean-Luc%';`
+    } catch {
+      // safe ignore
     }
 
     // 3. Seed Default Locations if locations table is empty
@@ -450,9 +437,10 @@ export async function cleanSlateDatabase(): Promise<{ success: boolean; message:
   const sql = getDbClient()
   if (sql) {
     try {
+      await sql`DELETE FROM drivers WHERE id = 'driver_mru_01' OR name ILIKE '%Jean-Luc%';`
       await sql`TRUNCATE TABLE trips;`
       await sql`TRUNCATE TABLE fuel_logs;`
-      return { success: true, message: "Neon database wiped to clean slate. Zero trips and zero fuel logs." }
+      return { success: true, message: "Neon database wiped to clean slate. Zero test drivers, trips, or fuel logs." }
     } catch (e) {
       console.error("Failed to truncate neon tables:", e)
       return { success: false, message: "Cleaned in-memory store; Neon truncate encountered: " + String(e) }

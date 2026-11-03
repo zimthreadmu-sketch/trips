@@ -218,14 +218,14 @@ function DriverSettingsTab({
       >
         <span
           className="profile-avatar"
-          style={{ background: driver.avatar_color || "#10B981", color: "#03261d" }}
+          style={{ background: driver?.avatar_color || "#10B981", color: "#03261d" }}
         >
-          {driver.initials || "DR"}
+          {driver?.initials || "DR"}
           <i />
         </span>
         <div>
-          <strong>{driver.name}</strong>
-          <span>Assigned: {driver.vehicle}</span>
+          <strong>{driver?.name || "Driver"}</strong>
+          <span>Assigned: {driver?.vehicle || "Toyota HiAce (4821 DC 18)"}</span>
           <small>
             <Icon name="check" size={11} /> Tap to switch driver profile
           </small>
@@ -427,13 +427,13 @@ export function DriverApp({
               aria-label="Select Driver Profile"
               onClick={() => setDriverSwitcherOpen(true)}
               style={{
-                background: activeDriver.avatar_color || "#10B981",
+                background: activeDriver?.avatar_color || "#10B981",
                 color: "#ffffff",
                 cursor: "pointer",
               }}
               title="Click to switch driver or change vehicle"
             >
-              {activeDriver.initials || "DR"}
+              {activeDriver?.initials || "DR"}
             </button>
           </div>
 
@@ -452,7 +452,7 @@ export function DriverApp({
               font: "inherit",
             }}
           >
-            <Icon name="car" size={15} /> {activeDriver.vehicle || "Toyota Quantum (GP 482-901)"}
+            <Icon name="car" size={15} /> {activeDriver?.vehicle || "Toyota HiAce (4821 DC 18)"}
             <span style={{ fontSize: "10px", color: "#20d59b", marginLeft: "4px" }}>• Change</span>
           </button>
         </header>

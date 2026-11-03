@@ -9,7 +9,7 @@ import type { Location, Driver, Trip, FuelLog, LedgerEntry, DashboardMetrics } f
 interface FleetPulseAppProps {
   initialLocations: Location[]
   initialDrivers: Driver[]
-  initialActiveDriver: Driver
+  initialActiveDriver?: Driver | null
   initialTodayTrips: Trip[]
   initialRecentTrips: Trip[]
   initialFuelLogs: FuelLog[]
@@ -32,9 +32,22 @@ export function FleetPulseApp({
   const [currentView, setCurrentView] = useState<"driver" | "admin">("driver")
   const [locations, setLocations] = useState<Location[]>(initialLocations)
   const [drivers, setDrivers] = useState<Driver[]>(
-    initialDrivers && initialDrivers.length > 0 ? initialDrivers : [initialActiveDriver]
+    (initialDrivers || []).filter((d) => d && d.id !== "driver_mru_01" && !d.name.toLowerCase().includes("jean-luc"))
   )
-  const [activeDriver, setActiveDriver] = useState<Driver>(initialActiveDriver)
+  const [activeDriver, setActiveDriver] = useState<Driver>(
+    initialActiveDriver && initialActiveDriver.id !== "driver_mru_01" && !initialActiveDriver.name.toLowerCase().includes("jean-luc")
+      ? initialActiveDriver
+      : (initialDrivers && initialDrivers[0]) || {
+          id: "",
+          name: "Driver",
+          phone: "",
+          avatar_color: "#10B981",
+          initials: "DR",
+          vehicle: "Toyota HiAce (4821 DC 18)",
+          status: "ACTIVE",
+          created_at: new Date().toISOString(),
+        }
+  )
   const [trips, setTrips] = useState<Trip[]>(initialRecentTrips)
   const [todayTrips, setTodayTrips] = useState<Trip[]>(initialTodayTrips)
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>(initialFuelLogs)
@@ -52,12 +65,24 @@ export function FleetPulseApp({
       const isBound = localStorage.getItem("fleetpulse_driver_bound")
       const savedDriverId = localStorage.getItem("fleetpulse_active_driver_id")
 
+      // Clear any legacy test driver from local storage
+      if (savedDriverId === "driver_mru_01") {
+        localStorage.removeItem("fleetpulse_driver_bound")
+        localStorage.removeItem("fleetpulse_active_driver_id")
+        setShowOnboarding(true)
+        return
+      }
+
       if (!isBound || !savedDriverId) {
         setShowOnboarding(true)
       } else {
         const found = drivers.find((d) => d.id === savedDriverId)
         if (found) {
           setActiveDriver(found)
+        } else if (drivers.length > 0) {
+          setActiveDriver(drivers[0])
+        } else {
+          setShowOnboarding(true)
         }
       }
     } catch {

@@ -111,8 +111,8 @@ export function AdminDashboard({
       return {
         id: t.id,
         initials: t.driver_initials || computeInitials(t.driver_name || "Driver"),
-        name: t.driver_name || "Thabo Mokoena",
-        driverId: t.vehicle || "Toyota Quantum",
+        name: t.driver_name || "Driver",
+        driverId: t.vehicle || "Toyota HiAce",
         type: t.trip_type,
         from: t.origin_name,
         to: t.destination_name,

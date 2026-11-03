@@ -58,8 +58,8 @@ function buildLedgerEntries(trips: Trip[], fuels: FuelLog[]): LedgerEntry[] {
     tone: t.trip_type === "VIP" ? "gold" : "green",
     status: t.status,
     timestamp: t.logged_at,
-    driver_name: t.driver_name || "Jean-Luc Laviolette",
-    driver_initials: t.driver_initials || "JL",
+    driver_name: t.driver_name || "Driver",
+    driver_initials: t.driver_initials || computeInitials(t.driver_name || "DR"),
     vehicle: t.vehicle || "Toyota HiAce (4821 DC 18)",
   }))
 
@@ -73,7 +73,7 @@ function buildLedgerEntries(trips: Trip[], fuels: FuelLog[]): LedgerEntry[] {
     numericAmount: -Number(f.cost_amount),
     tone: "red",
     timestamp: f.logged_at,
-    driver_name: f.driver_name || "Jean-Luc Laviolette",
+    driver_name: f.driver_name || "Driver",
     vehicle: f.vehicle || "Toyota HiAce (4821 DC 18)",
   }))
 
@@ -170,12 +170,15 @@ export async function getInitialData(): Promise<{
         (t) => new Date(t.logged_at).toDateString() === today
       )
 
-      const fallbackDriver: Driver = driversRes[0] || mockStore.drivers[0]
+      const activeDrivers = (driversRes || []).filter(
+        (d) => d && d.id !== "driver_mru_01" && !d.name.toLowerCase().includes("jean-luc")
+      )
+      const fallbackDriver: Driver | null = activeDrivers[0] || mockStore.drivers[0] || null
 
       return {
         locations: locationsRes,
-        drivers: driversRes.length > 0 ? driversRes : mockStore.drivers,
-        activeDriver: fallbackDriver,
+        drivers: activeDrivers,
+        activeDriver: fallbackDriver as Driver,
         todayTrips,
         recentTrips: parsedTrips,
         fuelLogs: parsedFuels,
@@ -194,10 +197,14 @@ export async function getInitialData(): Promise<{
     (t) => new Date(t.logged_at).toDateString() === today
   )
 
+  const mockDrivers = mockStore.drivers.filter(
+    (d) => d && d.id !== "driver_mru_01" && !d.name.toLowerCase().includes("jean-luc")
+  )
+
   return {
     locations: [...mockStore.locations].sort((a, b) => a.order_priority - b.order_priority),
-    drivers: [...mockStore.drivers],
-    activeDriver: mockStore.drivers[0],
+    drivers: mockDrivers,
+    activeDriver: mockDrivers[0] || (null as unknown as Driver),
     todayTrips,
     recentTrips: [...mockStore.trips],
     fuelLogs: [...mockStore.fuelLogs],
@@ -215,12 +222,20 @@ export async function getDrivers(): Promise<Driver[]> {
   if (isNeonConfigured() && sql) {
     try {
       await initDb()
-      return (await sql`SELECT * FROM drivers WHERE status = 'ACTIVE' ORDER BY name ASC;`) as Driver[]
+      return (await sql`
+        SELECT * FROM drivers 
+        WHERE status = 'ACTIVE' 
+          AND id != 'driver_mru_01' 
+          AND name NOT ILIKE '%Jean-Luc%' 
+        ORDER BY name ASC;
+      `) as Driver[]
     } catch (e) {
       console.error("Failed to fetch drivers from Neon:", e)
     }
   }
-  return mockStore.getDrivers()
+  return mockStore
+    .getDrivers()
+    .filter((d) => d && d.id !== "driver_mru_01" && !d.name.toLowerCase().includes("jean-luc"))
 }
 
 export async function createDriver(data: {
@@ -317,8 +332,8 @@ export async function logTrip(data: LogTripInput): Promise<{ success: boolean; t
     const loggedAt = data.loggedAt || new Date().toISOString()
     const status = data.status || "Approved"
     const fare = Number(data.fare)
-    const driverId = data.driverId || "driver_mru_01"
-    const driverName = data.driverName || "Jean-Luc Laviolette"
+    const driverId = data.driverId || ""
+    const driverName = data.driverName || "Driver"
     const driverInitials = data.driverInitials || computeInitials(driverName)
     const vehicle = data.vehicle || "Toyota HiAce (4821 DC 18)"
     const note = data.note ? data.note.trim() : null
@@ -418,8 +433,8 @@ export async function logFuel(data: LogFuelInput): Promise<{ success: boolean; f
     const cost = Number(data.costAmount)
     const liters = Number(data.liters)
     const odometer = data.odometer ? Number(data.odometer) : null
-    const driverId = data.driverId || "driver_mru_01"
-    const driverName = data.driverName || "Jean-Luc Laviolette"
+    const driverId = data.driverId || ""
+    const driverName = data.driverName || "Driver"
     const vehicle = data.vehicle || "Toyota HiAce (4821 DC 18)"
 
     const sql = getDbClient()

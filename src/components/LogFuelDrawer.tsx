@@ -77,8 +77,8 @@ export function LogFuelDrawer({
 
     const tempFuelId = `fuel_${Date.now()}`
     const loggedAt = new Date().toISOString()
-    const driverId = activeDriver?.id || "driver_mru_01"
-    const driverName = activeDriver?.name || "Jean-Luc Laviolette"
+    const driverId = activeDriver?.id || ""
+    const driverName = activeDriver?.name || "Driver"
     const vehicle = activeDriver?.vehicle || "Toyota HiAce (4821 DC 18)"
 
     const optimisticFuel: FuelLog = {

@@ -22,7 +22,7 @@ export default function DriverSwitcherModal({
   onAddDriver,
   onClose,
 }: DriverSwitcherModalProps) {
-  const [vehicle, setVehicle] = useState(activeDriver.vehicle || "Toyota Quantum (GP 482-901)")
+  const [vehicle, setVehicle] = useState(activeDriver?.vehicle || "Toyota HiAce (4821 DC 18)")
   const [isSavingVehicle, setIsSavingVehicle] = useState(false)
   const [vehicleSavedMessage, setVehicleSavedMessage] = useState("")
 

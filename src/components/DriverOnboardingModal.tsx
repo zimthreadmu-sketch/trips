@@ -260,7 +260,7 @@ export function DriverOnboardingModal({
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. Jean-Luc Laviolette"
+                  placeholder="e.g. Driver Full Name"
                   required
                   style={{
                     width: "100%",

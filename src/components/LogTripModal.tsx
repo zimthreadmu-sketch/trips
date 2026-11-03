@@ -93,9 +93,9 @@ export function LogTripModal({
 
     const tempTripId = `trip_${Date.now()}`
     const loggedAt = new Date().toISOString()
-    const driverId = activeDriver?.id || "driver_mru_01"
-    const driverName = activeDriver?.name || "Jean-Luc Laviolette"
-    const driverInitials = activeDriver?.initials || "JL"
+    const driverId = activeDriver?.id || ""
+    const driverName = activeDriver?.name || "Driver"
+    const driverInitials = activeDriver?.initials || "DR"
     const vehicle = activeDriver?.vehicle || "Toyota HiAce (4821 DC 18)"
     const note = tripType === "vip" ? (passengerRef.trim() || "VIP Airport / Hotel Charter") : "Standard Commute"
 
