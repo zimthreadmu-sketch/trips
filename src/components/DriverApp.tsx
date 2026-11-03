@@ -32,14 +32,20 @@ interface DriverAppProps {
 }
 
 // ==========================================
-// 1. TRIPS TAB (JOURNEY HISTORY)
+// 1. TRIPS & FUEL LOGS TAB (JOURNEY & EXPENSE HISTORY)
 // ==========================================
 function DriverTripsTab({
   trips,
+  fuelLogs,
+  subView,
+  onSubViewChange,
   onEditTrip,
   onTogglePayment,
 }: {
   trips: Trip[]
+  fuelLogs: FuelLog[]
+  subView: "trips" | "fuel"
+  onSubViewChange: (view: "trips" | "fuel") => void
   onEditTrip: (trip: Trip) => void
   onTogglePayment: (trip: Trip, e?: React.MouseEvent) => void
 }) {
@@ -57,129 +63,218 @@ function DriverTripsTab({
     (t) => (t.payment_status || (t.status === "Pending" ? "Pending" : "Paid")) === "Pending"
   ).length
 
+  const totalFuelCost = fuelLogs.reduce((sum, f) => sum + Number(f.cost_amount || 0), 0)
+  const totalLiters = fuelLogs.reduce((sum, f) => sum + Number(f.liters || 0), 0)
+
   return (
     <div className="driver-tab-screen">
       <div className="tab-title-row">
         <div>
-          <span className="eyebrow">JOURNEY HISTORY</span>
-          <h2>My trips</h2>
+          <span className="eyebrow">{subView === "trips" ? "JOURNEY HISTORY" : "EXPENSE AUDIT"}</span>
+          <h2>{subView === "trips" ? "My trips" : "Fuel logs"}</h2>
         </div>
       </div>
 
-      <div className="trip-summary-card">
-        <div>
-          <span>TOTAL LOGGED TRIPS</span>
-          <strong>{trips.length}</strong>
-          <small>
-            <b>{vipCount}</b> VIP journeys ·{" "}
-            <b style={{ color: pendingCount > 0 ? "#f5ad36" : "#20d59b" }}>{pendingCount}</b> pending
-          </small>
-        </div>
-        <div className="trip-ring">
-          <div>
-            <strong>{vipCount}</strong>
-            <span>VIP</span>
+      {/* Segmented View Switcher: Trips vs Fuel Logs */}
+      <div className="subview-tabs">
+        <button
+          type="button"
+          className={subView === "trips" ? "active" : ""}
+          onClick={() => onSubViewChange("trips")}
+        >
+          <Icon name="route" size={14} /> Trips ({trips.length})
+        </button>
+        <button
+          type="button"
+          className={`fuel-tab ${subView === "fuel" ? "active" : ""}`}
+          onClick={() => onSubViewChange("fuel")}
+        >
+          <Icon name="fuel" size={14} /> Fuel Logs ({fuelLogs.length})
+        </button>
+      </div>
+
+      {subView === "trips" ? (
+        <>
+          <div className="trip-summary-card">
+            <div>
+              <span>TOTAL LOGGED TRIPS</span>
+              <strong>{trips.length}</strong>
+              <small>
+                <b>{vipCount}</b> VIP journeys ·{" "}
+                <b style={{ color: pendingCount > 0 ? "#f5ad36" : "#20d59b" }}>{pendingCount}</b> pending
+              </small>
+            </div>
+            <div className="trip-ring">
+              <div>
+                <strong>{vipCount}</strong>
+                <span>VIP</span>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div className="tab-filter">
-        {(["All", "Paid", "Pending", "VIP"] as const).map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={filter === item ? "active" : ""}
-            onClick={() => setFilter(item)}
-          >
-            {item === "VIP" && <Icon name="sparkles" size={12} />}
-            {item === "Paid" && <Icon name="check" size={12} />}
-            {item === "Pending" && <Icon name="clock" size={12} />}
-            {item}
-            {item === "Pending" && pendingCount > 0 && (
-              <span
-                style={{
-                  marginLeft: "4px",
-                  padding: "1px 5px",
-                  borderRadius: "99px",
-                  background: "#f5ad36",
-                  color: "#1c1203",
-                  fontSize: "9px",
-                  fontWeight: "800",
-                }}
+          <div className="tab-filter">
+            {(["All", "Paid", "Pending", "VIP"] as const).map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={filter === item ? "active" : ""}
+                onClick={() => setFilter(item)}
               >
-                {pendingCount}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      <div className="trip-history-list">
-        {visibleTrips.length === 0 ? (
-          <div style={{ padding: "40px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
-            No trips found in this filter view.
-          </div>
-        ) : (
-          visibleTrips.map((trip) => {
-            const isVip = trip.trip_type === "VIP"
-            const isPaid =
-              (trip.payment_status || (trip.status === "Pending" ? "Pending" : "Paid")) === "Paid"
-
-            return (
-              <article
-                className="trip-history-item"
-                key={trip.id}
-                onClick={() => onEditTrip(trip)}
-                title="Tap to edit trip details"
-              >
-                <div className={`trip-history-icon ${trip.trip_type.toLowerCase()}`}>
-                  <Icon name={isVip ? "sparkles" : "route"} size={17} />
-                </div>
-                <div className="trip-history-copy">
-                  <span className="trip-history-time">
-                    {new Date(trip.logged_at).toLocaleTimeString("en-ZA", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                {item === "VIP" && <Icon name="sparkles" size={12} />}
+                {item === "Paid" && <Icon name="check" size={12} />}
+                {item === "Pending" && <Icon name="clock" size={12} />}
+                {item}
+                {item === "Pending" && pendingCount > 0 && (
+                  <span
+                    style={{
+                      marginLeft: "4px",
+                      padding: "1px 5px",
+                      borderRadius: "99px",
+                      background: "#f5ad36",
+                      color: "#1c1203",
+                      fontSize: "9px",
+                      fontWeight: "800",
+                    }}
+                  >
+                    {pendingCount}
                   </span>
-                  <strong>
-                    {trip.origin_name} <Icon name="arrow" size={13} /> {trip.destination_name}
-                  </strong>
-                  <small>
-                    <span className={trip.trip_type.toLowerCase()}>{trip.trip_type}</span>
-                    {trip.payment_method} · {trip.driver_name || "Driver"}
-                  </small>
-                </div>
-                <div className="trip-history-fare">
-                  <strong>Rs {Number(trip.fare).toFixed(2)}</strong>
-                  <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                    <button
-                      type="button"
-                      className={`payment-badge ${isPaid ? "paid" : "pending"}`}
-                      onClick={(e) => onTogglePayment(trip, e)}
-                      title={isPaid ? "Tap to mark as Pending" : "Tap to mark as Paid"}
-                    >
-                      <Icon name={isPaid ? "check" : "clock"} size={10} />
-                      {isPaid ? "Paid" : "Pending"}
-                    </button>
-                    <button
-                      type="button"
-                      className="trip-edit-btn"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onEditTrip(trip)
-                      }}
-                      title="Edit trip"
-                    >
-                      <Icon name="edit" size={11} /> Edit
-                    </button>
-                  </div>
-                </div>
-              </article>
-            )
-          })
-        )}
-      </div>
+                )}
+              </button>
+            ))}
+          </div>
+
+          <div className="trip-history-list">
+            {visibleTrips.length === 0 ? (
+              <div style={{ padding: "40px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
+                No trips found in this filter view.
+              </div>
+            ) : (
+              visibleTrips.map((trip) => {
+                const isVip = trip.trip_type === "VIP"
+                const isPaid =
+                  (trip.payment_status || (trip.status === "Pending" ? "Pending" : "Paid")) === "Paid"
+
+                return (
+                  <article
+                    className="trip-history-item"
+                    key={trip.id}
+                    onClick={() => onEditTrip(trip)}
+                    title="Tap to edit trip details"
+                  >
+                    <div className={`trip-history-icon ${trip.trip_type.toLowerCase()}`}>
+                      <Icon name={isVip ? "sparkles" : "route"} size={17} />
+                    </div>
+                    <div className="trip-history-copy">
+                      <span className="trip-history-time">
+                        {new Date(trip.logged_at).toLocaleTimeString("en-ZA", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                      <strong>
+                        {trip.origin_name} <Icon name="arrow" size={13} /> {trip.destination_name}
+                      </strong>
+                      <small>
+                        <span className={trip.trip_type.toLowerCase()}>{trip.trip_type}</span>
+                        {trip.payment_method} · {trip.driver_name || "Driver"}
+                      </small>
+                    </div>
+                    <div className="trip-history-fare">
+                      <strong>Rs {Number(trip.fare).toFixed(2)}</strong>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                        <button
+                          type="button"
+                          className={`payment-badge ${isPaid ? "paid" : "pending"}`}
+                          onClick={(e) => onTogglePayment(trip, e)}
+                          title={isPaid ? "Tap to mark as Pending" : "Tap to mark as Paid"}
+                        >
+                          <Icon name={isPaid ? "check" : "clock"} size={10} />
+                          {isPaid ? "Paid" : "Pending"}
+                        </button>
+                        <button
+                          type="button"
+                          className="trip-edit-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEditTrip(trip)
+                          }}
+                          title="Edit trip"
+                        >
+                          <Icon name="edit" size={11} /> Edit
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                )
+              })
+            )}
+          </div>
+        </>
+      ) : (
+        /* FUEL LOGS VIEW */
+        <>
+          <div className="trip-summary-card" style={{ background: "linear-gradient(135deg, #1f1416 0%, #11141c 100%)", borderColor: "#502126" }}>
+            <div>
+              <span style={{ color: "#ff858b" }}>TOTAL FUEL EXPENSES</span>
+              <strong style={{ color: "#ff777c" }}>Rs {totalFuelCost.toLocaleString()}</strong>
+              <small>
+                <b style={{ color: "#f5ad36" }}>{totalLiters.toFixed(1)}L</b> pumped · {fuelLogs.length} refills
+              </small>
+            </div>
+            <div className="fuel-history-icon" style={{ width: "48px", height: "48px", borderRadius: "14px" }}>
+              <Icon name="fuel" size={24} />
+            </div>
+          </div>
+
+          <div className="fuel-history-list">
+            {fuelLogs.length === 0 ? (
+              <div style={{ padding: "40px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
+                No fuel refill logs recorded yet.
+              </div>
+            ) : (
+              fuelLogs.map((fuel) => {
+                const fuelDate = new Date(fuel.logged_at)
+                const dateStr = fuelDate.toLocaleDateString("en-MU", {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })
+                const timeStr = fuelDate.toLocaleTimeString("en-ZA", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+
+                return (
+                  <article className="fuel-history-item" key={fuel.id}>
+                    <div className="fuel-history-icon">
+                      <Icon name="fuel" size={18} />
+                    </div>
+                    <div className="fuel-history-copy">
+                      <span className="fuel-history-time">
+                        {dateStr} · {timeStr}
+                      </span>
+                      <strong>{fuel.station_name}</strong>
+                      <div className="fuel-history-meta">
+                        <span className="fuel-driver-tag">
+                          <Icon name="users" size={12} /> Logged by: {fuel.driver_name || "Driver"}
+                        </span>
+                        <span>
+                          Vehicle: {fuel.vehicle || "Nissan March"}
+                          {fuel.odometer ? ` · Odometer: ${fuel.odometer.toLocaleString()} km` : ""}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="fuel-history-fare">
+                      <strong>−Rs {Number(fuel.cost_amount).toFixed(2)}</strong>
+                      <small>{Number(fuel.liters).toFixed(1)}L</small>
+                    </div>
+                  </article>
+                )
+              })
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -386,6 +481,7 @@ export function DriverApp({
   vipMultiplier = 1.8,
 }: DriverAppProps) {
   const [activeTab, setActiveTab] = useState<"shift" | "trips" | "insights" | "settings">("shift")
+  const [tripsTabSubView, setTripsTabSubView] = useState<"trips" | "fuel">("trips")
   const [onDuty, setOnDuty] = useState(true)
   const [tripSheetOpen, setTripSheetOpen] = useState(false)
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
@@ -522,7 +618,7 @@ export function DriverApp({
                 {activeTab === "shift"
                   ? "Morning, Driver"
                   : activeTab === "trips"
-                    ? "Trip history"
+                    ? (tripsTabSubView === "trips" ? "Trip history" : "Fuel logs")
                     : activeTab === "insights"
                       ? "Performance"
                       : "Account settings"}
@@ -697,13 +793,94 @@ export function DriverApp({
                     })
                 )}
               </div>
+
+              {/* DEDICATED FUEL REFILLS LOG SECTION (TIME & PERSON WHO LOGGED THEM) */}
+              <div className="section-heading" style={{ marginTop: "24px" }}>
+                <div>
+                  <span className="eyebrow">EXPENSE AUDIT</span>
+                  <h2>Recent fuel logs</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTripsTabSubView("fuel")
+                    setActiveTab("trips")
+                  }}
+                  aria-label="View all fuel logs"
+                >
+                  View all ({fuelLogs.length})
+                </button>
+              </div>
+
+              <div className="shift-feed">
+                {fuelLogs.length === 0 ? (
+                  <div style={{ padding: "28px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
+                    <p style={{ margin: "0 0 6px 0", color: "#a5acba" }}>No fuel refills logged yet.</p>
+                    <p style={{ margin: 0, fontSize: "11px", color: "#626978" }}>
+                      Tap <strong style={{ color: "#f5ad36" }}>⛽ Log Fuel</strong> to record station refills.
+                    </p>
+                  </div>
+                ) : (
+                  fuelLogs.slice(0, 5).map((fuel) => {
+                    const fuelDate = new Date(fuel.logged_at)
+                    const timeStr = fuelDate.toLocaleTimeString("en-ZA", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                    const dateStr = fuelDate.toLocaleDateString("en-MU", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })
+
+                    return (
+                      <article className="shift-item" key={fuel.id} style={{ cursor: "default" }}>
+                        <div className="log-icon red">
+                          <Icon name="fuel" size={18} />
+                        </div>
+                        <div className="log-copy">
+                          <div className="log-title">
+                            <strong>{fuel.station_name}</strong>
+                            <time>{dateStr} · {timeStr}</time>
+                          </div>
+                          <div className="log-meta">
+                            <span className="tag red">
+                              Refill · {Number(fuel.liters).toFixed(1)}L
+                            </span>
+                            <b className="red">−Rs {Number(fuel.cost_amount).toFixed(2)}</b>
+                          </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              marginTop: "5px",
+                              fontSize: "11px",
+                              color: "#7e8899",
+                            }}
+                          >
+                            <span style={{ color: "#20d59b", fontWeight: 700 }}>
+                              <Icon name="users" size={11} /> Logged by: {fuel.driver_name || activeDriver.name}
+                            </span>
+                            <span>· {fuel.vehicle || activeDriver.vehicle}</span>
+                            {fuel.odometer ? <span>· {fuel.odometer.toLocaleString()} km</span> : null}
+                          </div>
+                        </div>
+                      </article>
+                    )
+                  })
+                )}
+              </div>
             </>
           )}
 
-          {/* TAB 2: TRIPS VIEW */}
+          {/* TAB 2: TRIPS & FUEL VIEW */}
           {activeTab === "trips" && (
             <DriverTripsTab
               trips={allTrips}
+              fuelLogs={fuelLogs}
+              subView={tripsTabSubView}
+              onSubViewChange={setTripsTabSubView}
               onEditTrip={(trip) => setEditingTrip(trip)}
               onTogglePayment={handleTogglePaymentStatus}
             />

@@ -292,6 +292,25 @@ button { color: inherit; }
 .payment-badge.pending:hover { background: rgba(245, 173, 54, 0.25); }
 .trip-edit-btn { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; background: #161a24; border: 1px solid #283040; color: #8c95a6; cursor: pointer; transition: all 0.15s ease; }
 .trip-edit-btn:hover { background: #202634; color: #f5f7fa; border-color: #3f4b62; }
+
+/* Subview switcher between Trips & Fuel in Journey History */
+.subview-tabs { display: flex; background: #12151e; border: 1px solid #242934; border-radius: 10px; padding: 3px; margin-bottom: 14px; gap: 4px; }
+.subview-tabs button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px; border: 0; border-radius: 7px; color: #7a8497; background: transparent; font-size: 11px; font-weight: 700; cursor: pointer; transition: all 0.15s ease; }
+.subview-tabs button.active { color: #f5f7fa; background: #1f2533; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); }
+.subview-tabs button.fuel-tab.active { color: #ff858b; background: #2a1518; box-shadow: inset 0 0 0 1px #502126; }
+
+.fuel-history-list { border: 1px solid #242934; border-radius: 13px; overflow: hidden; background: #101219; }
+.fuel-history-item { display: flex; align-items: flex-start; gap: 12px; padding: 13px 12px; border-bottom: 1px solid #1c212c; }
+.fuel-history-item:last-child { border: 0; }
+.fuel-history-icon { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 auto; border-radius: 9px; color: #ff777c; background: #2b1619; border: 1px solid #481f23; }
+.fuel-history-copy { min-width: 0; flex: 1; }
+.fuel-history-time { display: block; margin-bottom: 3px; color: #626c7d; font-size: 11px; font-weight: 500; }
+.fuel-history-copy > strong { display: block; overflow: hidden; color: #e1e6ed; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.fuel-history-meta { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; font-size: 11px; color: #7d8798; }
+.fuel-driver-tag { display: inline-flex; align-items: center; gap: 4px; color: #20d59b; font-weight: 600; }
+.fuel-history-fare { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.fuel-history-fare strong { color: #ff777c; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.fuel-history-fare small { color: #f5ad36; font-size: 11px; font-weight: 700; }
 .load-more-button { width: 100%; height: 38px; margin-top: 11px; border: 1px solid #292e39; border-radius: 9px; color: #7c8594; background: #14171e; font-size: 9px; font-weight: 600; }
 .insight-range { margin-top: 0; }
 .earnings-hero { position: relative; min-height: 232px; padding: 18px 18px 12px; overflow: hidden; border: 1px solid #285443; border-radius: 14px; background: radial-gradient(circle at 80% 0, #1d4c3b 0, transparent 48%), #11171a; }
