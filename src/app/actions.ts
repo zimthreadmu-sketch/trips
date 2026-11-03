@@ -233,7 +233,7 @@ export async function createDriver(data: {
       throw new Error("Driver name is required.")
     }
     const name = data.name.trim()
-    const vehicle = data.vehicle ? data.vehicle.trim() : "Toyota Quantum (GP 482-901)"
+    const vehicle = data.vehicle ? data.vehicle.trim() : "Toyota HiAce (4821 DC 18)"
     const initials = computeInitials(name)
     const driverId = `driver_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
     const colors = ["#10B981", "#F59E0B", "#3B82F6", "#8B5CF6", "#EC4899", "#14B8A6"]
@@ -241,13 +241,20 @@ export async function createDriver(data: {
 
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {
-      await initDb()
-      const rows = (await sql`
-        INSERT INTO drivers (id, name, phone, avatar_color, initials, vehicle, status, created_at)
-        VALUES (${driverId}, ${name}, ${data.phone || ""}, ${avatarColor}, ${initials}, ${vehicle}, 'ACTIVE', NOW())
-        RETURNING *;
-      `) as Driver[]
-      return { success: true, driver: rows[0] }
+      try {
+        await initDb()
+        const rows = (await sql`
+          INSERT INTO drivers (id, name, phone, avatar_color, initials, vehicle, status, created_at)
+          VALUES (${driverId}, ${name}, ${data.phone || ""}, ${avatarColor}, ${initials}, ${vehicle}, 'ACTIVE', NOW())
+          RETURNING *;
+        `) as Driver[]
+        if (rows && rows[0]) {
+          mockStore.addDriver(name, vehicle, data.phone)
+          return { success: true, driver: rows[0] }
+        }
+      } catch (neonErr) {
+        console.error("[FleetPulse DB] Neon createDriver failed, falling back to local store:", neonErr)
+      }
     }
 
     const created = mockStore.addDriver(name, vehicle, data.phone)
@@ -265,8 +272,12 @@ export async function updateDriverVehicle(
     const trimmed = vehicle.trim()
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {
-      await initDb()
-      await sql`UPDATE drivers SET vehicle = ${trimmed} WHERE id = ${driverId};`
+      try {
+        await initDb()
+        await sql`UPDATE drivers SET vehicle = ${trimmed} WHERE id = ${driverId};`
+      } catch (neonErr) {
+        console.error("[FleetPulse DB] Neon updateDriverVehicle failed:", neonErr)
+      }
     }
     mockStore.updateDriverVehicle(driverId, trimmed)
     return { success: true }
@@ -314,17 +325,38 @@ export async function logTrip(data: LogTripInput): Promise<{ success: boolean; t
 
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {
-      await initDb()
-      const rows = (await sql`
-        INSERT INTO trips (id, driver_id, driver_name, driver_initials, vehicle, origin_name, destination_name, trip_type, fare, payment_method, note, status, logged_at)
-        VALUES (${tripId}, ${driverId}, ${driverName}, ${driverInitials}, ${vehicle}, ${data.originName}, ${data.destinationName}, ${data.tripType}, ${fare}, ${data.paymentMethod}, ${note}, ${status}, ${loggedAt})
-        RETURNING *;
-      `) as Trip[]
+      try {
+        await initDb()
+        const rows = (await sql`
+          INSERT INTO trips (id, driver_id, driver_name, driver_initials, vehicle, origin_name, destination_name, trip_type, fare, payment_method, note, status, logged_at)
+          VALUES (${tripId}, ${driverId}, ${driverName}, ${driverInitials}, ${vehicle}, ${data.originName}, ${data.destinationName}, ${data.tripType}, ${fare}, ${data.paymentMethod}, ${note}, ${status}, ${loggedAt})
+          RETURNING *;
+        `) as Trip[]
 
-      const inserted = rows[0]
-      return {
-        success: true,
-        trip: { ...inserted, fare: Number(inserted.fare) },
+        const inserted = rows[0]
+        if (inserted) {
+          mockStore.addTrip({
+            id: inserted.id,
+            driver_id: inserted.driver_id,
+            driver_name: inserted.driver_name,
+            driver_initials: inserted.driver_initials,
+            vehicle: inserted.vehicle,
+            origin_name: inserted.origin_name,
+            destination_name: inserted.destination_name,
+            trip_type: inserted.trip_type as "Regular" | "VIP",
+            fare: Number(inserted.fare),
+            payment_method: inserted.payment_method,
+            note: inserted.note,
+            status: inserted.status as "Approved" | "Pending" | "Rejected",
+            logged_at: inserted.logged_at,
+          })
+          return {
+            success: true,
+            trip: { ...inserted, fare: Number(inserted.fare) },
+          }
+        }
+      } catch (neonErr) {
+        console.error("[FleetPulse DB] Neon logTrip failed, falling back to local store:", neonErr)
       }
     }
 
@@ -392,21 +424,38 @@ export async function logFuel(data: LogFuelInput): Promise<{ success: boolean; f
 
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {
-      await initDb()
-      const rows = (await sql`
-        INSERT INTO fuel_logs (id, driver_id, driver_name, vehicle, station_name, cost_amount, liters, odometer, logged_at)
-        VALUES (${fuelId}, ${driverId}, ${driverName}, ${vehicle}, ${data.stationName.trim()}, ${cost}, ${liters}, ${odometer}, ${loggedAt})
-        RETURNING *;
-      `) as FuelLog[]
+      try {
+        await initDb()
+        const rows = (await sql`
+          INSERT INTO fuel_logs (id, driver_id, driver_name, vehicle, station_name, cost_amount, liters, odometer, logged_at)
+          VALUES (${fuelId}, ${driverId}, ${driverName}, ${vehicle}, ${data.stationName.trim()}, ${cost}, ${liters}, ${odometer}, ${loggedAt})
+          RETURNING *;
+        `) as FuelLog[]
 
-      const inserted = rows[0]
-      return {
-        success: true,
-        fuelLog: {
-          ...inserted,
-          cost_amount: Number(inserted.cost_amount),
-          liters: Number(inserted.liters),
-        },
+        const inserted = rows[0]
+        if (inserted) {
+          mockStore.addFuelLog({
+            id: inserted.id,
+            driver_id: inserted.driver_id,
+            driver_name: inserted.driver_name,
+            vehicle: inserted.vehicle,
+            station_name: inserted.station_name,
+            cost_amount: Number(inserted.cost_amount),
+            liters: Number(inserted.liters),
+            odometer: inserted.odometer !== null ? Number(inserted.odometer) : null,
+            logged_at: inserted.logged_at,
+          })
+          return {
+            success: true,
+            fuelLog: {
+              ...inserted,
+              cost_amount: Number(inserted.cost_amount),
+              liters: Number(inserted.liters),
+            },
+          }
+        }
+      } catch (neonErr) {
+        console.error("[FleetPulse DB] Neon logFuel failed, falling back to local store:", neonErr)
       }
     }
 
@@ -445,19 +494,26 @@ export async function addLocation(name: string): Promise<{ success: boolean; loc
 
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {
-      await initDb()
-      const locId = `loc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
-      const maxOrderRes = (await sql`SELECT COALESCE(MAX(order_priority), 0) as max FROM locations;`) as { max: number }[]
-      const nextOrder = Number(maxOrderRes[0]?.max || 0) + 1
+      try {
+        await initDb()
+        const locId = `loc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
+        const maxOrderRes = (await sql`SELECT COALESCE(MAX(order_priority), 0) as max FROM locations;`) as { max: number }[]
+        const nextOrder = Number(maxOrderRes[0]?.max || 0) + 1
 
-      const rows = (await sql`
-        INSERT INTO locations (id, name, is_active, order_priority, created_at)
-        VALUES (${locId}, ${trimmed}, true, ${nextOrder}, NOW())
-        ON CONFLICT (name) DO UPDATE SET is_active = true
-        RETURNING *;
-      `) as Location[]
+        const rows = (await sql`
+          INSERT INTO locations (id, name, is_active, order_priority, created_at)
+          VALUES (${locId}, ${trimmed}, true, ${nextOrder}, NOW())
+          ON CONFLICT (name) DO UPDATE SET is_active = true
+          RETURNING *;
+        `) as Location[]
 
-      return { success: true, location: rows[0] }
+        if (rows && rows[0]) {
+          mockStore.addLocation(trimmed)
+          return { success: true, location: rows[0] }
+        }
+      } catch (neonErr) {
+        console.error("[FleetPulse DB] Neon addLocation failed, falling back to local store:", neonErr)
+      }
     }
 
     const loc = mockStore.addLocation(trimmed)
@@ -481,9 +537,12 @@ export async function updateTripStatus(
   try {
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {
-      await initDb()
-      await sql`UPDATE trips SET status = ${status} WHERE id = ${tripId};`
-      return { success: true }
+      try {
+        await initDb()
+        await sql`UPDATE trips SET status = ${status} WHERE id = ${tripId};`
+      } catch (neonErr) {
+        console.error("[FleetPulse DB] Neon updateTripStatus failed:", neonErr)
+      }
     }
 
     mockStore.updateTripStatus(tripId, status)
