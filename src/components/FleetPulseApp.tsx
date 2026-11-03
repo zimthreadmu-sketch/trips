@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { DriverApp } from "./DriverApp"
 import { AdminDashboard } from "./AdminDashboard"
 import DriverOnboardingModal from "./DriverOnboardingModal"
+import { PWAInstallPrompt } from "./PWAInstallPrompt"
 import type { Location, Driver, Trip, FuelLog, LedgerEntry, DashboardMetrics } from "@/lib/db"
 
 interface FleetPulseAppProps {
@@ -311,6 +312,9 @@ export function FleetPulseApp({
           setMultiplier={setMultiplier}
         />
       )}
+
+      {/* 4. PWA Installation Prompt (for phones without installed PWA) */}
+      <PWAInstallPrompt />
     </>
   )
 }

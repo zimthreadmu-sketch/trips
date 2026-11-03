@@ -628,8 +628,8 @@ export function DriverApp({
 
               <div className="section-heading">
                 <div>
-                  <span className="eyebrow">LIVE ACTIVITY</span>
-                  <h2>Recent shift logs</h2>
+                  <span className="eyebrow">RECENT TRIPS</span>
+                  <h2>Recent trips</h2>
                 </div>
                 <button
                   type="button"
@@ -641,72 +641,60 @@ export function DriverApp({
               </div>
 
               <div className="shift-feed">
-                {ledgerEntries.length === 0 ? (
+                {ledgerEntries.filter((item) => item.type === "trip").length === 0 ? (
                   <div style={{ padding: "36px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
-                    <p style={{ margin: "0 0 6px 0", color: "#a5acba" }}>No shift activity logged yet.</p>
+                    <p style={{ margin: "0 0 6px 0", color: "#a5acba" }}>No trips logged yet today.</p>
                     <p style={{ margin: 0, fontSize: "11px", color: "#626978" }}>
-                      Tap <strong style={{ color: "#20d59b" }}>+ Log Trip</strong> or <strong style={{ color: "#f5ad36" }}>⛽ Log Fuel</strong> to record your first entry.
+                      Tap <strong style={{ color: "#20d59b" }}>+ Log Trip</strong> to record your first journey.
                     </p>
                   </div>
                 ) : (
-                  ledgerEntries.slice(0, 8).map((item) => {
-                    const associatedTrip =
-                      item.type === "trip" ? allTrips.find((t) => t.id === item.id) : null
-                    const isPaid = associatedTrip
-                      ? (associatedTrip.payment_status ||
-                          (associatedTrip.status === "Pending" ? "Pending" : "Paid")) === "Paid"
-                      : true
+                  ledgerEntries
+                    .filter((item) => item.type === "trip")
+                    .slice(0, 5)
+                    .map((item) => {
+                      const associatedTrip = allTrips.find((t) => t.id === item.id)
+                      const isPaid = associatedTrip
+                        ? (associatedTrip.payment_status ||
+                            (associatedTrip.status === "Pending" ? "Pending" : "Paid")) === "Paid"
+                        : true
 
-                    return (
-                      <article
-                        className="shift-item"
-                        key={item.id}
-                        onClick={() => {
-                          if (associatedTrip) setEditingTrip(associatedTrip)
-                        }}
-                        style={{ cursor: associatedTrip ? "pointer" : "default" }}
-                        title={associatedTrip ? "Tap to view or edit trip details" : undefined}
-                      >
-                        <div className={`log-icon ${item.tone}`}>
-                          <Icon
-                            name={
-                              item.type === "fuel"
-                                ? "fuel"
-                                : item.tone === "gold"
-                                  ? "sparkles"
-                                  : "route"
-                            }
-                            size={18}
-                          />
-                        </div>
-                        <div className="log-copy">
-                          <div className="log-title">
-                            <strong>{item.title}</strong>
-                            <time>{item.time}</time>
+                      return (
+                        <article
+                          className="shift-item"
+                          key={item.id}
+                          style={{ cursor: "default" }}
+                        >
+                          <div className={`log-icon ${item.tone}`}>
+                            <Icon
+                              name={item.tone === "gold" ? "sparkles" : "route"}
+                              size={18}
+                            />
                           </div>
-                          <div className="log-meta">
-                            <span className={`tag ${item.tone}`}>
-                              {item.detail}
-                            </span>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              {associatedTrip && (
-                                <button
-                                  type="button"
+                          <div className="log-copy">
+                            <div className="log-title">
+                              <strong>{item.title}</strong>
+                              <time>{item.time}</time>
+                            </div>
+                            <div className="log-meta">
+                              <span className={`tag ${item.tone}`}>
+                                {item.detail}
+                              </span>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span
                                   className={`payment-badge ${isPaid ? "paid" : "pending"}`}
-                                  onClick={(e) => handleTogglePaymentStatus(associatedTrip, e)}
-                                  title={isPaid ? "Tap to mark as Pending" : "Tap to mark as Paid"}
+                                  style={{ cursor: "default", userSelect: "none" }}
                                 >
                                   <Icon name={isPaid ? "check" : "clock"} size={10} />
                                   {isPaid ? "Paid" : "Pending"}
-                                </button>
-                              )}
-                              <b className={item.tone}>{item.amount}</b>
+                                </span>
+                                <b className={item.tone}>{item.amount}</b>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </article>
-                    )
-                  })
+                        </article>
+                      )
+                    })
                 )}
               </div>
             </>
