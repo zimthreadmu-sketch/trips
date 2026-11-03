@@ -130,3 +130,4 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     </svg>
   )
 }
+export default Icon

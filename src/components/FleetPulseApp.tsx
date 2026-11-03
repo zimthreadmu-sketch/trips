@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DriverApp } from "./DriverApp"
 import { AdminDashboard } from "./AdminDashboard"
 import type { Location, Driver, Trip, FuelLog, LedgerEntry, DashboardMetrics } from "@/lib/db"
 
 interface FleetPulseAppProps {
   initialLocations: Location[]
-  initialDriver: Driver
+  initialDrivers: Driver[]
+  initialActiveDriver: Driver
   initialTodayTrips: Trip[]
   initialRecentTrips: Trip[]
   initialFuelLogs: FuelLog[]
@@ -18,7 +19,8 @@ interface FleetPulseAppProps {
 
 export function FleetPulseApp({
   initialLocations,
-  initialDriver,
+  initialDrivers,
+  initialActiveDriver,
   initialTodayTrips,
   initialRecentTrips,
   initialFuelLogs,
@@ -27,6 +29,10 @@ export function FleetPulseApp({
 }: FleetPulseAppProps) {
   const [desktopView, setDesktopView] = useState<"admin" | "driver">("admin")
   const [locations, setLocations] = useState<Location[]>(initialLocations)
+  const [drivers, setDrivers] = useState<Driver[]>(
+    initialDrivers && initialDrivers.length > 0 ? initialDrivers : [initialActiveDriver]
+  )
+  const [activeDriver, setActiveDriver] = useState<Driver>(initialActiveDriver)
   const [trips, setTrips] = useState<Trip[]>(initialRecentTrips)
   const [todayTrips, setTodayTrips] = useState<Trip[]>(initialTodayTrips)
   const [fuelLogs, setFuelLogs] = useState<FuelLog[]>(initialFuelLogs)
@@ -34,6 +40,45 @@ export function FleetPulseApp({
   const [metrics, setMetrics] = useState<DashboardMetrics>(initialMetrics)
   const [regularRate, setRegularRate] = useState(60)
   const [multiplier, setMultiplier] = useState(1.8)
+
+  // Hydrate active driver from localStorage
+  useEffect(() => {
+    try {
+      const savedId = localStorage.getItem("fleetpulse_active_driver_id")
+      if (savedId) {
+        const found = drivers.find((d) => d.id === savedId)
+        if (found) {
+          setActiveDriver(found)
+        }
+      }
+    } catch {
+      // safe ignore localStorage errors
+    }
+  }, [drivers])
+
+  const handleSelectDriver = (drv: Driver) => {
+    setActiveDriver(drv)
+    try {
+      localStorage.setItem("fleetpulse_active_driver_id", drv.id)
+    } catch {
+      // safe ignore
+    }
+  }
+
+  const handleUpdateDriver = (updated: Driver) => {
+    setActiveDriver(updated)
+    setDrivers((prev) => prev.map((d) => (d.id === updated.id ? updated : d)))
+  }
+
+  const handleAddDriver = (newDriver: Driver) => {
+    setDrivers((prev) => [...prev, newDriver])
+    setActiveDriver(newDriver)
+    try {
+      localStorage.setItem("fleetpulse_active_driver_id", newDriver.id)
+    } catch {
+      // safe ignore
+    }
+  }
 
   // Handle new trip logged (optimistic live update)
   const handleTripLogged = (newTrip: Trip) => {
@@ -52,6 +97,9 @@ export function FleetPulseApp({
       tone: newTrip.trip_type === "VIP" ? "gold" : "green",
       status: newTrip.status,
       timestamp: newTrip.logged_at,
+      driver_name: newTrip.driver_name || activeDriver.name,
+      driver_initials: newTrip.driver_initials || activeDriver.initials,
+      vehicle: newTrip.vehicle || activeDriver.vehicle,
     }
     setLedgerEntries((prev) => [newLedgerEntry, ...prev])
 
@@ -94,6 +142,8 @@ export function FleetPulseApp({
       numericAmount: -Number(newFuel.cost_amount),
       tone: "red",
       timestamp: newFuel.logged_at,
+      driver_name: newFuel.driver_name || activeDriver.name,
+      vehicle: newFuel.vehicle || activeDriver.vehicle,
     }
     setLedgerEntries((prev) => [newLedgerEntry, ...prev])
 
@@ -114,7 +164,12 @@ export function FleetPulseApp({
 
   // Handle location added
   const handleLocationAdded = (newLoc: Location) => {
-    setLocations((prev) => [...prev, newLoc])
+    setLocations((prev) => {
+      if (prev.some((l) => l.name.toLowerCase() === newLoc.name.toLowerCase())) {
+        return prev
+      }
+      return [...prev, newLoc]
+    })
   }
 
   return (
@@ -131,7 +186,12 @@ export function FleetPulseApp({
           desktopPreview={desktopView === "driver"}
           onAdminView={() => setDesktopView("admin")}
           locations={locations}
-          driver={initialDriver}
+          drivers={drivers}
+          activeDriver={activeDriver}
+          onSelectDriver={handleSelectDriver}
+          onUpdateDriver={handleUpdateDriver}
+          onAddDriver={handleAddDriver}
+          onLocationAdded={handleLocationAdded}
           todayTrips={todayTrips}
           allTrips={trips}
           fuelLogs={fuelLogs}
@@ -161,3 +221,4 @@ export function FleetPulseApp({
     </>
   )
 }
+export default FleetPulseApp

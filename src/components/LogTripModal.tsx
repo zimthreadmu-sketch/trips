@@ -2,14 +2,16 @@
 
 import { useState, useTransition } from "react"
 import { Icon } from "./Icon"
-import { logTrip } from "@/app/actions"
-import type { Location, Trip } from "@/lib/db"
+import { logTrip, addLocation } from "@/app/actions"
+import type { Location, Trip, Driver } from "@/lib/db"
 
 interface LogTripModalProps {
   isOpen: boolean
   onClose: () => void
   locations: Location[]
+  activeDriver?: Driver
   onTripLogged: (trip: Trip) => void
+  onLocationAdded?: (location: Location) => void
   vipMultiplier?: number
   baseFare?: number
 }
@@ -18,19 +20,27 @@ export function LogTripModal({
   isOpen,
   onClose,
   locations,
+  activeDriver,
   onTripLogged,
+  onLocationAdded,
   vipMultiplier = 1.8,
   baseFare = 60,
 }: LogTripModalProps) {
-  const [tripType, setTripType] = useState<"regular" | "vip">("vip")
+  const [tripType, setTripType] = useState<"regular" | "vip">("regular")
   const [origin, setOrigin] = useState("Booysens")
   const [destination, setDestination] = useState("Rosettenville")
-  const [fare, setFare] = useState(tripType === "vip" ? Math.round(baseFare * vipMultiplier) : baseFare)
-  const [passengerRef, setPassengerRef] = useState("Executive Charter - Dr. Adeleke")
-  const [payment, setPayment] = useState<string>("Account")
+  const [fare, setFare] = useState<number | string>(baseFare)
+  const [passengerRef, setPassengerRef] = useState("")
+  const [payment, setPayment] = useState<string>("Cash")
   const [isLogged, setIsLogged] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+
+  // On-the-fly location creation state
+  const [isAddingLocation, setIsAddingLocation] = useState(false)
+  const [newLocationName, setNewLocationName] = useState("")
+  const [targetLocationField, setTargetLocationField] = useState<"origin" | "destination">("destination")
+  const [isSavingLocation, setIsSavingLocation] = useState(false)
 
   if (!isOpen) return null
 
@@ -45,22 +55,63 @@ export function LogTripModal({
     }
   }
 
+  const handleSaveNewLocation = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newLocationName.trim() || newLocationName.trim().length < 2) return
+    setIsSavingLocation(true)
+    try {
+      const res = await addLocation(newLocationName.trim())
+      if (res.success && res.location) {
+        if (targetLocationField === "origin") {
+          setOrigin(res.location.name)
+        } else {
+          setDestination(res.location.name)
+        }
+        if (onLocationAdded) {
+          onLocationAdded(res.location)
+        }
+        setNewLocationName("")
+        setIsAddingLocation(false)
+      } else {
+        setError(res.error || "Failed to add location")
+      }
+    } catch {
+      setError("Network error adding location.")
+    } finally {
+      setIsSavingLocation(false)
+    }
+  }
+
   const handleSubmit = () => {
+    const numericFare = Number(fare)
+    if (isNaN(numericFare) || numericFare <= 0) {
+      setError("Please enter a valid trip fare amount greater than R0.")
+      return
+    }
     if (isPending || isLogged) return
     setError(null)
 
-    // Build optimistic trip
     const tempTripId = `trip_${Date.now()}`
     const loggedAt = new Date().toISOString()
+    const driverId = activeDriver?.id || "driver_thabo_01"
+    const driverName = activeDriver?.name || "Thabo Mokoena"
+    const driverInitials = activeDriver?.initials || "TM"
+    const vehicle = activeDriver?.vehicle || "Toyota Quantum (GP 482-901)"
+    const note = tripType === "vip" ? (passengerRef.trim() || "VIP Charter") : "Standard Commute"
+
+    // Build optimistic trip
     const optimisticTrip: Trip = {
       id: tempTripId,
-      driver_id: "driver_thabo_01",
+      driver_id: driverId,
+      driver_name: driverName,
+      driver_initials: driverInitials,
+      vehicle: vehicle,
       origin_name: origin,
       destination_name: destination,
       trip_type: tripType === "vip" ? "VIP" : "Regular",
-      fare: Number(fare),
+      fare: numericFare,
       payment_method: payment,
-      note: tripType === "vip" ? passengerRef : "Standard Commute",
+      note: note,
       status: "Approved",
       logged_at: loggedAt,
     }
@@ -72,13 +123,16 @@ export function LogTripModal({
     startTransition(async () => {
       try {
         const result = await logTrip({
-          driverId: "driver_thabo_01",
+          driverId,
+          driverName,
+          driverInitials,
+          vehicle,
           originName: origin,
           destinationName: destination,
           tripType: tripType === "vip" ? "VIP" : "Regular",
-          fare: Number(fare),
+          fare: numericFare,
           paymentMethod: payment,
-          note: tripType === "vip" ? passengerRef : "Standard Commute",
+          note: note,
           status: "Approved",
           loggedAt,
         })
@@ -89,13 +143,13 @@ export function LogTripModal({
           return
         }
 
-        // Close modal after nice feedback animation
+        // Close modal after feedback animation
         window.setTimeout(() => {
           setIsLogged(false)
           onClose()
-        }, 850)
-      } catch (err: any) {
-        setError(err.message || "Failed to submit trip")
+        }, 750)
+      } catch (err: unknown) {
+        setError((err as Error).message || "Failed to submit trip")
         setIsLogged(false)
       }
     })
@@ -104,9 +158,9 @@ export function LogTripModal({
   // Location list with defaults
   const locationNames = locations.length > 0
     ? locations.map((l) => l.name)
-    : ["Booysens", "Rosettenville", "JHB Central", "Southgate", "Sandton", "Rosebank"]
+    : ["Booysens", "Rosettenville", "JHB CBD", "Southgate", "Sandton", "Rosebank", "Gold Reef City"]
 
-  const quickSpots = ["Booysens", "Rosettenville", "JHB Central", "Southgate"].filter(
+  const quickSpots = ["Booysens", "Rosettenville", "JHB CBD", "Southgate"].filter(
     (s) => s !== origin
   )
 
@@ -122,6 +176,7 @@ export function LogTripModal({
         aria-modal="true"
         role="dialog"
         aria-label="Log a new trip"
+        style={{ maxHeight: "90vh", overflowY: "auto" }}
       >
         <div className="sheet-grabber" />
         <div className="sheet-title">
@@ -145,6 +200,7 @@ export function LogTripModal({
           </div>
         )}
 
+        {/* Trip Type Selector */}
         <div className="trip-selector">
           <button
             type="button"
@@ -167,14 +223,35 @@ export function LogTripModal({
             <Icon name="sparkles" size={15} />
             <span>
               <strong>VIP Custom Rate Enabled</strong>
-              Premium account pricing is active ({vipMultiplier}× base rate)
+              Enter custom premium fare for this executive charter
             </span>
           </div>
         )}
 
+        {/* Route Fields with Add Location Trigger */}
         <div className="route-fields">
           <label>
-            <span>Origin location</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <span>Origin location</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setTargetLocationField("origin")
+                  setIsAddingLocation(true)
+                }}
+                style={{
+                  background: "transparent",
+                  border: 0,
+                  color: "#20d59b",
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                + Add New
+              </button>
+            </div>
             <span className="select-wrap">
               <Icon name="location" size={17} />
               <select
@@ -196,7 +273,27 @@ export function LogTripModal({
             <span />
           </div>
           <label>
-            <span>Destination location</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <span>Destination location</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setTargetLocationField("destination")
+                  setIsAddingLocation(true)
+                }}
+                style={{
+                  background: "transparent",
+                  border: 0,
+                  color: "#20d59b",
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                + Add New
+              </button>
+            </div>
             <span className="select-wrap">
               <Icon name="location" size={17} />
               <select
@@ -214,6 +311,70 @@ export function LogTripModal({
           </label>
         </div>
 
+        {/* Inline Add Location Subform */}
+        {isAddingLocation && (
+          <form
+            onSubmit={handleSaveNewLocation}
+            style={{
+              background: "#12151e",
+              border: "1px solid #20d59b44",
+              borderRadius: "10px",
+              padding: "12px",
+              marginBottom: "12px",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+              <span style={{ fontSize: "11px", fontWeight: "700", color: "#20d59b" }}>
+                Add New {targetLocationField === "origin" ? "Pickup" : "Destination"} Location
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsAddingLocation(false)}
+                style={{ background: "transparent", border: 0, color: "#7a8292", cursor: "pointer" }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <input
+                type="text"
+                value={newLocationName}
+                onChange={(e) => setNewLocationName(e.target.value)}
+                placeholder="e.g. Melrose Arch or OR Tambo"
+                style={{
+                  flex: 1,
+                  height: "38px",
+                  padding: "0 10px",
+                  background: "#090a0f",
+                  border: "1px solid #28303f",
+                  borderRadius: "8px",
+                  color: "#f5f7fa",
+                  fontSize: "12px",
+                }}
+                autoFocus
+              />
+              <button
+                type="submit"
+                disabled={isSavingLocation || !newLocationName.trim()}
+                style={{
+                  height: "38px",
+                  padding: "0 14px",
+                  borderRadius: "8px",
+                  background: "#20d59b",
+                  color: "#03261d",
+                  fontWeight: "700",
+                  fontSize: "12px",
+                  border: 0,
+                  cursor: "pointer",
+                }}
+              >
+                {isSavingLocation ? "Adding..." : "Add"}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Quick Spot Chips */}
         <div className="quick-spots">
           <span>QUICK SPOTS</span>
           <div>
@@ -241,21 +402,63 @@ export function LogTripModal({
           </label>
         )}
 
+        {/* DRIVER DIRECT TRIP FARE ENTRY */}
         <div className="fare-panel">
-          <div className="fare-row">
-            <div>
-              <span>TRIP FARE</span>
-              <strong>R {Number(fare).toFixed(2)}</strong>
-            </div>
-            <div>
-              <button type="button" onClick={() => setFare((prev) => prev + 10)}>
-                +R10
-              </button>
-              <button type="button" onClick={() => setFare((prev) => prev + 50)}>
-                +R50
-              </button>
+          <div style={{ marginBottom: "8px" }}>
+            <span style={{ display: "block", fontSize: "10px", fontWeight: "700", color: "#8991a3", letterSpacing: "0.1em" }}>
+              ENTER TRIP FARE (DRIVER SPECIFIES AMOUNT)
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px" }}>
+              <span style={{ fontSize: "20px", fontWeight: "800", color: tripType === "vip" ? "#f7c75b" : "#20d59b" }}>
+                R
+              </span>
+              <input
+                type="number"
+                inputMode="decimal"
+                step="any"
+                min="0"
+                value={fare}
+                onChange={(e) => setFare(e.target.value)}
+                placeholder="0.00"
+                style={{
+                  width: "100%",
+                  height: "44px",
+                  background: "#151821",
+                  border: `1px solid ${tripType === "vip" ? "#f5ad3666" : "#20d59b55"}`,
+                  borderRadius: "10px",
+                  padding: "0 12px",
+                  fontSize: "20px",
+                  fontWeight: "800",
+                  color: "#f5f7fa",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              />
             </div>
           </div>
+
+          {/* Quick Fare Presets */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
+            {[60, 90, 120, 150, 200, 350, 500].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setFare(preset)}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: "6px",
+                  background: Number(fare) === preset ? "#20d59b22" : "#1b1e2a",
+                  border: Number(fare) === preset ? "1px solid #20d59b" : "1px solid #262b3a",
+                  color: Number(fare) === preset ? "#20d59b" : "#a2aab8",
+                  fontSize: "11px",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                }}
+              >
+                R{preset}
+              </button>
+            ))}
+          </div>
+
           <div className="payment-toggle">
             {(["Cash", "Card", "Account"] as const).map((method) => (
               <button
@@ -292,3 +495,4 @@ export function LogTripModal({
     </div>
   )
 }
+export default LogTripModal

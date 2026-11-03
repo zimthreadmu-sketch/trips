@@ -10,7 +10,8 @@ export default async function Page() {
   return (
     <FleetPulseApp
       initialLocations={initialData.locations}
-      initialDriver={initialData.driver}
+      initialDrivers={initialData.drivers}
+      initialActiveDriver={initialData.activeDriver}
       initialTodayTrips={initialData.todayTrips}
       initialRecentTrips={initialData.recentTrips}
       initialFuelLogs={initialData.fuelLogs}

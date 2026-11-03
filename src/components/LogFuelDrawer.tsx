@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react"
 import { Icon } from "./Icon"
 import { logFuel } from "@/app/actions"
-import type { FuelLog } from "@/lib/db"
+import type { FuelLog, Driver } from "@/lib/db"
 
 interface LogFuelDrawerProps {
   isOpen: boolean
   onClose: () => void
+  activeDriver?: Driver
   onFuelLogged: (fuelLog: FuelLog) => void
 }
 
@@ -31,11 +32,12 @@ const QUICK_STATIONS = [
 export function LogFuelDrawer({
   isOpen,
   onClose,
+  activeDriver,
   onFuelLogged,
 }: LogFuelDrawerProps) {
   const [station, setStation] = useState(STATIONS[0])
-  const [costAmount, setCostAmount] = useState(350)
-  const [liters, setLiters] = useState(15.4)
+  const [costAmount, setCostAmount] = useState<number | string>(350)
+  const [liters, setLiters] = useState<number | string>(15.4)
   const [odometer, setOdometer] = useState<string>("142850")
   const [isLogged, setIsLogged] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,24 +62,33 @@ export function LogFuelDrawer({
     if (isPending || isLogged) return
     setError(null)
 
-    if (costAmount <= 0) {
+    const numericCost = Number(costAmount)
+    const numericLiters = Number(liters)
+
+    if (isNaN(numericCost) || numericCost <= 0) {
       setError("Please enter a valid fuel cost amount.")
       return
     }
 
-    if (liters <= 0) {
+    if (isNaN(numericLiters) || numericLiters <= 0) {
       setError("Please enter liters fueled.")
       return
     }
 
     const tempFuelId = `fuel_${Date.now()}`
     const loggedAt = new Date().toISOString()
+    const driverId = activeDriver?.id || "driver_thabo_01"
+    const driverName = activeDriver?.name || "Thabo Mokoena"
+    const vehicle = activeDriver?.vehicle || "Toyota Quantum (GP 482-901)"
+
     const optimisticFuel: FuelLog = {
       id: tempFuelId,
-      driver_id: "driver_thabo_01",
+      driver_id: driverId,
+      driver_name: driverName,
+      vehicle: vehicle,
       station_name: station,
-      cost_amount: Number(costAmount),
-      liters: Number(liters),
+      cost_amount: numericCost,
+      liters: numericLiters,
       odometer: odometer ? Number(odometer) : null,
       logged_at: loggedAt,
     }
@@ -89,10 +100,12 @@ export function LogFuelDrawer({
     startTransition(async () => {
       try {
         const result = await logFuel({
-          driverId: "driver_thabo_01",
+          driverId,
+          driverName,
+          vehicle,
           stationName: station,
-          costAmount: Number(costAmount),
-          liters: Number(liters),
+          costAmount: numericCost,
+          liters: numericLiters,
           odometer: odometer ? Number(odometer) : undefined,
           loggedAt,
         })
@@ -106,9 +119,9 @@ export function LogFuelDrawer({
         window.setTimeout(() => {
           setIsLogged(false)
           onClose()
-        }, 850)
-      } catch (err: any) {
-        setError(err.message || "Failed to submit fuel expense")
+        }, 750)
+      } catch (err: unknown) {
+        setError((err as Error).message || "Failed to submit fuel expense")
         setIsLogged(false)
       }
     })
@@ -122,7 +135,7 @@ export function LogFuelDrawer({
       }
     >
       <section
-        className="trip-sheet"
+        className="fuel-drawer"
         aria-modal="true"
         role="dialog"
         aria-label="Log fuel refill"
@@ -130,8 +143,8 @@ export function LogFuelDrawer({
         <div className="sheet-grabber" />
         <div className="sheet-title">
           <div>
-            <span className="eyebrow">FLEET EXPENSE</span>
-            <h2>Log fuel refill</h2>
+            <span className="eyebrow">REFUEL EXPENSE</span>
+            <h2>Log Fuel Entry</h2>
           </div>
           <button
             className="close-button"
@@ -149,43 +162,90 @@ export function LogFuelDrawer({
           </div>
         )}
 
-        <div className="fuel-banner">
-          <Icon name="fuel" size={17} />
-          <span>
-            <strong>Fuel Expense Tracking</strong>
-            Direct deduction from shift net earnings
-          </span>
+        <div className="hero-cost-card">
+          <span>TOTAL COST (ZAR)</span>
+          <div className="cost-input-row">
+            <span className="currency">R</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="any"
+              value={costAmount}
+              onChange={(e) => setCostAmount(e.target.value)}
+              placeholder="0.00"
+            />
+          </div>
+          <small>Recorded at {station.split(" ")[0]} station</small>
         </div>
 
-        <div style={{ marginTop: "14px" }}>
-          <label className="text-field" style={{ marginTop: 0 }}>
-            <span>Fuel station</span>
-            <span className="select-wrap">
-              <Icon name="location" size={17} />
-              <select
-                value={station}
-                onChange={(e) => setStation(e.target.value)}
-              >
-                {STATIONS.map((st) => (
-                  <option key={st} value={st}>
-                    {st}
-                  </option>
-                ))}
-              </select>
-              <Icon name="chevron" size={15} />
-            </span>
+        <div className="quick-presets">
+          {[200, 350, 500, 750, 1000].map((preset) => (
+            <button
+              type="button"
+              key={preset}
+              onClick={() => {
+                setCostAmount(preset)
+                setLiters(Number((preset / 22.75).toFixed(1)))
+              }}
+              className={Number(costAmount) === preset ? "active" : ""}
+            >
+              R{preset}
+            </button>
+          ))}
+        </div>
+
+        <div className="fuel-form-grid">
+          <label className="text-field">
+            <span>Volume (Liters)</span>
+            <div className="unit-input">
+              <input
+                type="number"
+                step="0.1"
+                value={liters}
+                onChange={(e) => handleLitersChange(parseFloat(e.target.value) || 0)}
+              />
+              <span>L</span>
+            </div>
+          </label>
+
+          <label className="text-field">
+            <span>Odometer reading (km)</span>
+            <input
+              type="text"
+              value={odometer}
+              onChange={(e) => setOdometer(e.target.value)}
+              placeholder="e.g. 184520"
+            />
           </label>
         </div>
 
+        <label className="text-field">
+          <span>Fuel station</span>
+          <span className="select-wrap">
+            <Icon name="location" size={17} />
+            <select
+              value={station}
+              onChange={(e) => setStation(e.target.value)}
+            >
+              {STATIONS.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
+            </select>
+            <Icon name="chevron" size={15} />
+          </span>
+        </label>
+
         <div className="quick-spots">
-          <span>POPULAR BRANDS</span>
+          <span>FREQUENT STATIONS</span>
           <div>
             {QUICK_STATIONS.map((brand) => (
               <button
                 type="button"
                 key={brand}
                 onClick={() => handleQuickStation(brand)}
-                className={`fuel-spot ${station.includes(brand) ? "active" : ""}`}
+                className={station.toLowerCase().includes(brand.toLowerCase()) ? "active" : ""}
               >
                 {brand}
               </button>
@@ -193,78 +253,21 @@ export function LogFuelDrawer({
           </div>
         </div>
 
-        <div className="fuel-inputs-row">
-          <div className="fuel-input-box">
-            <label>Liters pumped</label>
-            <div className="input-wrap">
-              <input
-                type="number"
-                step="0.1"
-                min="1"
-                value={liters}
-                onChange={(e) => handleLitersChange(Number(e.target.value))}
-              />
-              <span style={{ color: "#7a8292", fontSize: "11px" }}>L</span>
-            </div>
-          </div>
-          <div className="fuel-input-box">
-            <label>Total expense</label>
-            <div className="input-wrap">
-              <span style={{ color: "#7a8292", fontSize: "11px" }}>R</span>
-              <input
-                type="number"
-                min="1"
-                value={costAmount}
-                onChange={(e) => setCostAmount(Number(e.target.value))}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: "12px" }}>
-          <label className="text-field" style={{ marginTop: 0 }}>
-            <span>Odometer reading (km)</span>
-            <input
-              type="number"
-              value={odometer}
-              onChange={(e) => setOdometer(e.target.value)}
-              placeholder="e.g. 142850"
-            />
-          </label>
-        </div>
-
-        <div className="fare-panel" style={{ marginTop: "14px", border: "1px solid #3d2426" }}>
-          <div className="fare-row">
-            <div>
-              <span>LOGGED EXPENSE</span>
-              <strong style={{ color: "#ff7479" }}>−R {Number(costAmount).toFixed(2)}</strong>
-            </div>
-            <div>
-              <button type="button" onClick={() => handleLitersChange(Math.round(liters + 5))}>
-                +5L
-              </button>
-              <button type="button" onClick={() => handleLitersChange(Math.round(liters + 10))}>
-                +10L
-              </button>
-            </div>
-          </div>
-        </div>
-
         <button
           type="button"
-          className={`complete-button fuel ${isLogged ? "completed" : ""}`}
+          className={`complete-button fuel-submit ${isLogged ? "completed" : ""}`}
           onClick={handleSubmit}
           disabled={isPending || isLogged}
         >
           {isLogged ? (
             <>
-              <Icon name="check" /> Fuel expense recorded!
+              <Icon name="check" /> Fuel logged successfully
             </>
           ) : isPending ? (
-            <>Recording fuel expense...</>
+            <>Recording fuel...</>
           ) : (
             <>
-              <Icon name="fuel" size={17} /> Record Fuel Expense
+              <Icon name="fuel" /> Record Fuel Expense
             </>
           )}
         </button>
@@ -272,3 +275,4 @@ export function LogFuelDrawer({
     </div>
   )
 }
+export default LogFuelDrawer

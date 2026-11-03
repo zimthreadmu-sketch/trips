@@ -5,6 +5,8 @@ import {
   getDbClient,
   isNeonConfigured,
   mockStore,
+  computeInitials,
+  cleanSlateDatabase,
   type Location,
   type Driver,
   type Trip,
@@ -56,6 +58,9 @@ function buildLedgerEntries(trips: Trip[], fuels: FuelLog[]): LedgerEntry[] {
     tone: t.trip_type === "VIP" ? "gold" : "green",
     status: t.status,
     timestamp: t.logged_at,
+    driver_name: t.driver_name || "Thabo Mokoena",
+    driver_initials: t.driver_initials || "TM",
+    vehicle: t.vehicle || "Toyota Quantum (GP 482-901)",
   }))
 
   const fuelEntries: LedgerEntry[] = fuels.map((f) => ({
@@ -68,6 +73,8 @@ function buildLedgerEntries(trips: Trip[], fuels: FuelLog[]): LedgerEntry[] {
     numericAmount: -Number(f.cost_amount),
     tone: "red",
     timestamp: f.logged_at,
+    driver_name: f.driver_name || "Thabo Mokoena",
+    vehicle: f.vehicle || "Toyota Quantum (GP 482-901)",
   }))
 
   return [...tripEntries, ...fuelEntries].sort(
@@ -111,11 +118,12 @@ function calculateDashboardMetrics(trips: Trip[], fuels: FuelLog[]): DashboardMe
 }
 
 // ==========================================
-// 1. GET INITIAL DATA
+// 1. GET INITIAL DATA (REAL & LIVE)
 // ==========================================
 export async function getInitialData(): Promise<{
   locations: Location[]
-  driver: Driver
+  drivers: Driver[]
+  activeDriver: Driver
   todayTrips: Trip[]
   recentTrips: Trip[]
   fuelLogs: FuelLog[]
@@ -133,8 +141,8 @@ export async function getInitialData(): Promise<{
         SELECT * FROM locations WHERE is_active = true ORDER BY order_priority ASC, name ASC;
       `) as Location[]
 
-      const driverRes = (await sql`
-        SELECT * FROM drivers LIMIT 1;
+      const driversRes = (await sql`
+        SELECT * FROM drivers WHERE status = 'ACTIVE' ORDER BY created_at ASC;
       `) as Driver[]
 
       const tripsRes = (await sql`
@@ -162,9 +170,12 @@ export async function getInitialData(): Promise<{
         (t) => new Date(t.logged_at).toDateString() === today
       )
 
+      const fallbackDriver: Driver = driversRes[0] || mockStore.drivers[0]
+
       return {
         locations: locationsRes,
-        driver: driverRes[0] || mockStore.drivers[0],
+        drivers: driversRes.length > 0 ? driversRes : mockStore.drivers,
+        activeDriver: fallbackDriver,
         todayTrips,
         recentTrips: parsedTrips,
         fuelLogs: parsedFuels,
@@ -185,7 +196,8 @@ export async function getInitialData(): Promise<{
 
   return {
     locations: [...mockStore.locations].sort((a, b) => a.order_priority - b.order_priority),
-    driver: mockStore.drivers[0],
+    drivers: [...mockStore.drivers],
+    activeDriver: mockStore.drivers[0],
     todayTrips,
     recentTrips: [...mockStore.trips],
     fuelLogs: [...mockStore.fuelLogs],
@@ -196,10 +208,81 @@ export async function getInitialData(): Promise<{
 }
 
 // ==========================================
-// 2. LOG TRIP
+// 2. DRIVER MANAGEMENT ACTIONS
+// ==========================================
+export async function getDrivers(): Promise<Driver[]> {
+  const sql = getDbClient()
+  if (isNeonConfigured() && sql) {
+    try {
+      await initDb()
+      return (await sql`SELECT * FROM drivers WHERE status = 'ACTIVE' ORDER BY name ASC;`) as Driver[]
+    } catch (e) {
+      console.error("Failed to fetch drivers from Neon:", e)
+    }
+  }
+  return mockStore.getDrivers()
+}
+
+export async function createDriver(data: {
+  name: string
+  vehicle: string
+  phone?: string
+}): Promise<{ success: boolean; driver: Driver; error?: string }> {
+  try {
+    if (!data.name || data.name.trim().length === 0) {
+      throw new Error("Driver name is required.")
+    }
+    const name = data.name.trim()
+    const vehicle = data.vehicle ? data.vehicle.trim() : "Toyota Quantum (GP 482-901)"
+    const initials = computeInitials(name)
+    const driverId = `driver_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
+    const colors = ["#10B981", "#F59E0B", "#3B82F6", "#8B5CF6", "#EC4899", "#14B8A6"]
+    const avatarColor = colors[Math.floor(Math.random() * colors.length)]
+
+    const sql = getDbClient()
+    if (isNeonConfigured() && sql) {
+      await initDb()
+      const rows = (await sql`
+        INSERT INTO drivers (id, name, phone, avatar_color, initials, vehicle, status, created_at)
+        VALUES (${driverId}, ${name}, ${data.phone || ""}, ${avatarColor}, ${initials}, ${vehicle}, 'ACTIVE', NOW())
+        RETURNING *;
+      `) as Driver[]
+      return { success: true, driver: rows[0] }
+    }
+
+    const created = mockStore.addDriver(name, vehicle, data.phone)
+    return { success: true, driver: created }
+  } catch (err: unknown) {
+    return { success: false, driver: null as unknown as Driver, error: (err as Error).message }
+  }
+}
+
+export async function updateDriverVehicle(
+  driverId: string,
+  vehicle: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const trimmed = vehicle.trim()
+    const sql = getDbClient()
+    if (isNeonConfigured() && sql) {
+      await initDb()
+      await sql`UPDATE drivers SET vehicle = ${trimmed} WHERE id = ${driverId};`
+    }
+    mockStore.updateDriverVehicle(driverId, trimmed)
+    return { success: true }
+  } catch (err: unknown) {
+    return { success: false, error: (err as Error).message }
+  }
+}
+
+// ==========================================
+// 3. LOG TRIP (DRIVER DIRECT FARE ENTRY)
 // ==========================================
 export interface LogTripInput {
   driverId?: string
+  driverName?: string
+  driverInitials?: string
+  vehicle?: string
   originName: string
   destinationName: string
   tripType: "Regular" | "VIP"
@@ -221,17 +304,20 @@ export async function logTrip(data: LogTripInput): Promise<{ success: boolean; t
 
     const tripId = `trip_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
     const loggedAt = data.loggedAt || new Date().toISOString()
-    const status = data.status || "Pending"
+    const status = data.status || "Approved"
     const fare = Number(data.fare)
     const driverId = data.driverId || "driver_thabo_01"
+    const driverName = data.driverName || "Thabo Mokoena"
+    const driverInitials = data.driverInitials || computeInitials(driverName)
+    const vehicle = data.vehicle || "Toyota Quantum (GP 482-901)"
     const note = data.note ? data.note.trim() : null
 
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {
       await initDb()
       const rows = (await sql`
-        INSERT INTO trips (id, driver_id, origin_name, destination_name, trip_type, fare, payment_method, note, status, logged_at)
-        VALUES (${tripId}, ${driverId}, ${data.originName}, ${data.destinationName}, ${data.tripType}, ${fare}, ${data.paymentMethod}, ${note}, ${status}, ${loggedAt})
+        INSERT INTO trips (id, driver_id, driver_name, driver_initials, vehicle, origin_name, destination_name, trip_type, fare, payment_method, note, status, logged_at)
+        VALUES (${tripId}, ${driverId}, ${driverName}, ${driverInitials}, ${vehicle}, ${data.originName}, ${data.destinationName}, ${data.tripType}, ${fare}, ${data.paymentMethod}, ${note}, ${status}, ${loggedAt})
         RETURNING *;
       `) as Trip[]
 
@@ -246,28 +332,36 @@ export async function logTrip(data: LogTripInput): Promise<{ success: boolean; t
     const inserted = mockStore.addTrip({
       id: tripId,
       driver_id: driverId,
+      driver_name: driverName,
+      driver_initials: driverInitials,
+      vehicle: vehicle,
       origin_name: data.originName,
       destination_name: data.destinationName,
       trip_type: data.tripType,
-      fare,
+      fare: fare,
       payment_method: data.paymentMethod,
-      note,
-      status,
+      note: note,
+      status: status,
       logged_at: loggedAt,
     })
 
     return { success: true, trip: inserted }
-  } catch (error: any) {
-    console.error("[FleetPulse Server Action] Error logging trip:", error)
-    return { success: false, trip: null as any, error: error.message || "Failed to log trip" }
+  } catch (err: unknown) {
+    return {
+      success: false,
+      trip: null as unknown as Trip,
+      error: (err as Error).message || "Failed to log trip.",
+    }
   }
 }
 
 // ==========================================
-// 3. LOG FUEL
+// 4. LOG FUEL ENTRY
 // ==========================================
 export interface LogFuelInput {
   driverId?: string
+  driverName?: string
+  vehicle?: string
   stationName: string
   costAmount: number
   liters: number
@@ -277,29 +371,31 @@ export interface LogFuelInput {
 
 export async function logFuel(data: LogFuelInput): Promise<{ success: boolean; fuelLog: FuelLog; error?: string }> {
   try {
-    if (!data.stationName) {
-      throw new Error("Fuel station name is required.")
+    if (!data.stationName || data.stationName.trim().length === 0) {
+      throw new Error("Fuel station location is required.")
     }
     if (!data.costAmount || data.costAmount <= 0) {
-      throw new Error("Cost amount must be greater than zero.")
+      throw new Error("Fuel cost amount must be greater than zero.")
     }
     if (!data.liters || data.liters <= 0) {
-      throw new Error("Liters must be greater than zero.")
+      throw new Error("Fuel liters must be greater than zero.")
     }
 
     const fuelId = `fuel_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
     const loggedAt = data.loggedAt || new Date().toISOString()
-    const driverId = data.driverId || "driver_thabo_01"
     const cost = Number(data.costAmount)
     const liters = Number(data.liters)
-    const odo = data.odometer ? Number(data.odometer) : null
+    const odometer = data.odometer ? Number(data.odometer) : null
+    const driverId = data.driverId || "driver_thabo_01"
+    const driverName = data.driverName || "Thabo Mokoena"
+    const vehicle = data.vehicle || "Toyota Quantum (GP 482-901)"
 
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {
       await initDb()
       const rows = (await sql`
-        INSERT INTO fuel_logs (id, driver_id, station_name, cost_amount, liters, odometer, logged_at)
-        VALUES (${fuelId}, ${driverId}, ${data.stationName}, ${cost}, ${liters}, ${odo}, ${loggedAt})
+        INSERT INTO fuel_logs (id, driver_id, driver_name, vehicle, station_name, cost_amount, liters, odometer, logged_at)
+        VALUES (${fuelId}, ${driverId}, ${driverName}, ${vehicle}, ${data.stationName.trim()}, ${cost}, ${liters}, ${odometer}, ${loggedAt})
         RETURNING *;
       `) as FuelLog[]
 
@@ -310,7 +406,6 @@ export async function logFuel(data: LogFuelInput): Promise<{ success: boolean; f
           ...inserted,
           cost_amount: Number(inserted.cost_amount),
           liters: Number(inserted.liters),
-          odometer: inserted.odometer !== null ? Number(inserted.odometer) : null,
         },
       }
     }
@@ -319,177 +414,147 @@ export async function logFuel(data: LogFuelInput): Promise<{ success: boolean; f
     const inserted = mockStore.addFuelLog({
       id: fuelId,
       driver_id: driverId,
-      station_name: data.stationName,
+      driver_name: driverName,
+      vehicle: vehicle,
+      station_name: data.stationName.trim(),
       cost_amount: cost,
-      liters,
-      odometer: odo,
+      liters: liters,
+      odometer: odometer,
       logged_at: loggedAt,
     })
 
     return { success: true, fuelLog: inserted }
-  } catch (error: any) {
-    console.error("[FleetPulse Server Action] Error logging fuel:", error)
-    return { success: false, fuelLog: null as any, error: error.message || "Failed to log fuel" }
+  } catch (err: unknown) {
+    return {
+      success: false,
+      fuelLog: null as unknown as FuelLog,
+      error: (err as Error).message || "Failed to log fuel refill.",
+    }
   }
 }
 
 // ==========================================
-// 4. ADD LOCATION
+// 5. ADD LOCATION (ON-THE-FLY BY DRIVER OR ADMIN)
 // ==========================================
 export async function addLocation(name: string): Promise<{ success: boolean; location: Location; error?: string }> {
   try {
-    const cleanName = name.trim()
-    if (!cleanName) {
-      throw new Error("Location name cannot be empty.")
+    const trimmed = name ? name.trim() : ""
+    if (!trimmed || trimmed.length < 2) {
+      throw new Error("Location name must be at least 2 characters.")
     }
 
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {
       await initDb()
-      const existing = (await sql`
-        SELECT * FROM locations WHERE LOWER(name) = LOWER(${cleanName}) LIMIT 1;
-      `) as Location[]
-
-      if (existing.length > 0) {
-        return { success: true, location: existing[0] }
-      }
-
-      const id = `loc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
-      const countRes = await sql`SELECT count(*) as total FROM locations;`
-      const priority = Number(countRes[0]?.total || 0) + 1
+      const locId = `loc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
+      const maxOrderRes = (await sql`SELECT COALESCE(MAX(order_priority), 0) as max FROM locations;`) as { max: number }[]
+      const nextOrder = Number(maxOrderRes[0]?.max || 0) + 1
 
       const rows = (await sql`
         INSERT INTO locations (id, name, is_active, order_priority, created_at)
-        VALUES (${id}, ${cleanName}, true, ${priority}, NOW())
+        VALUES (${locId}, ${trimmed}, true, ${nextOrder}, NOW())
+        ON CONFLICT (name) DO UPDATE SET is_active = true
         RETURNING *;
       `) as Location[]
 
       return { success: true, location: rows[0] }
     }
 
-    // In-memory fallback
-    const loc = mockStore.addLocation(cleanName)
+    const loc = mockStore.addLocation(trimmed)
     return { success: true, location: loc }
-  } catch (error: any) {
-    console.error("[FleetPulse Server Action] Error adding location:", error)
-    return { success: false, location: null as any, error: error.message || "Failed to add location" }
+  } catch (err: unknown) {
+    return {
+      success: false,
+      location: null as unknown as Location,
+      error: (err as Error).message || "Failed to add location.",
+    }
   }
 }
 
 // ==========================================
-// 5. UPDATE TRIP STATUS (AUDIT APPROVAL/REJECTION)
+// 6. UPDATE TRIP STATUS
 // ==========================================
 export async function updateTripStatus(
   tripId: string,
   status: "Approved" | "Pending" | "Rejected"
-): Promise<{ success: boolean; trip: Trip | null; error?: string }> {
+): Promise<{ success: boolean; error?: string }> {
   try {
     const sql = getDbClient()
     if (isNeonConfigured() && sql) {
       await initDb()
-      const rows = (await sql`
-        UPDATE trips
-        SET status = ${status}
-        WHERE id = ${tripId}
-        RETURNING *;
-      `) as Trip[]
-
-      if (rows.length === 0) {
-        return { success: false, trip: null, error: "Trip not found" }
-      }
-
-      return {
-        success: true,
-        trip: { ...rows[0], fare: Number(rows[0].fare) },
-      }
+      await sql`UPDATE trips SET status = ${status} WHERE id = ${tripId};`
+      return { success: true }
     }
 
-    // In-memory fallback
-    const updated = mockStore.updateTripStatus(tripId, status)
-    if (!updated) {
-      return { success: false, trip: null, error: "Trip not found" }
-    }
-
-    return { success: true, trip: updated }
-  } catch (error: any) {
-    console.error("[FleetPulse Server Action] Error updating trip status:", error)
-    return { success: false, trip: null, error: error.message || "Failed to update trip status" }
+    mockStore.updateTripStatus(tripId, status)
+    return { success: true }
+  } catch (err: unknown) {
+    return { success: false, error: (err as Error).message || "Failed to update trip status." }
   }
 }
 
 // ==========================================
-// 6. GET ANALYTICS
+// 7. GET ANALYTICS
 // ==========================================
-export async function getAnalytics(
-  dateRange: "today" | "7days" | "30days" | "all" = "all"
-): Promise<AnalyticsData> {
+export async function getAnalytics(range: "today" | "7days" | "30days" | "all" = "all"): Promise<AnalyticsData> {
   const { recentTrips, fuelLogs } = await getInitialData()
 
   const now = new Date()
-  let cutoff = new Date(0) // epoch for 'all'
+  let cutoff = new Date(0)
 
-  if (dateRange === "today") {
-    cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
-  } else if (dateRange === "7days") {
-    cutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-  } else if (dateRange === "30days") {
-    cutoff = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+  if (range === "today") {
+    cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  } else if (range === "7days") {
+    cutoff = new Date(now.getTime() - 7 * 86400000)
+  } else if (range === "30days") {
+    cutoff = new Date(now.getTime() - 30 * 86400000)
   }
 
   const filteredTrips = recentTrips.filter((t) => new Date(t.logged_at) >= cutoff)
   const filteredFuels = fuelLogs.filter((f) => new Date(f.logged_at) >= cutoff)
 
-  const revenue = filteredTrips.reduce((sum, t) => sum + Number(t.fare || 0), 0)
-  const fuelCost = filteredFuels.reduce((sum, f) => sum + Number(f.cost_amount || 0), 0)
+  const revenue = filteredTrips.reduce((acc, t) => acc + Number(t.fare || 0), 0)
+  const fuelCost = filteredFuels.reduce((acc, f) => acc + Number(f.cost_amount || 0), 0)
   const netProfit = revenue - fuelCost
+
   const tripCount = filteredTrips.length
   const vipTrips = filteredTrips.filter((t) => t.trip_type === "VIP").length
   const regularTrips = filteredTrips.filter((t) => t.trip_type === "Regular").length
   const vipRatio = tripCount > 0 ? Math.round((vipTrips / tripCount) * 100) : 0
-  const avgTripFare = tripCount > 0 ? Math.round((revenue / tripCount) * 100) / 100 : 0
+  const avgTripFare = tripCount > 0 ? Math.round(revenue / tripCount) : 0
 
-  // Corridor route calculation
-  const corridorMap: Record<string, { trips: number; revenue: number }> = {}
-  for (const t of filteredTrips) {
+  // Corridor route volume
+  const corridorMap = new Map<string, { trips: number; revenue: number }>()
+  filteredTrips.forEach((t) => {
     const route = `${t.origin_name} → ${t.destination_name}`
-    if (!corridorMap[route]) {
-      corridorMap[route] = { trips: 0, revenue: 0 }
-    }
-    corridorMap[route].trips += 1
-    corridorMap[route].revenue += Number(t.fare || 0)
-  }
+    const existing = corridorMap.get(route) || { trips: 0, revenue: 0 }
+    corridorMap.set(route, {
+      trips: existing.trips + 1,
+      revenue: existing.revenue + Number(t.fare || 0),
+    })
+  })
 
-  const topCorridors = Object.entries(corridorMap)
+  const topCorridors = Array.from(corridorMap.entries())
     .map(([route, stats]) => ({ route, trips: stats.trips, revenue: stats.revenue }))
-    .sort((a, b) => b.revenue - a.revenue)
+    .sort((a, b) => b.trips - a.trips)
     .slice(0, 5)
 
-  // Daily statistics calculation (last 7 days by default)
-  const days = 7
-  const dailyStats: { date: string; revenue: number; fuel: number; trips: number }[] = []
-  for (let i = days - 1; i >= 0; i--) {
-    const targetDate = new Date()
-    targetDate.setDate(targetDate.getDate() - i)
-    const dateStr = targetDate.toISOString().split("T")[0]
-    const label = targetDate.toLocaleDateString("en-ZA", { weekday: "short", day: "numeric" })
+  // Daily Stats for line chart
+  const dailyMap = new Map<string, { revenue: number; fuel: number; trips: number }>()
+  filteredTrips.forEach((t) => {
+    const day = new Date(t.logged_at).toISOString().split("T")[0]
+    const cur = dailyMap.get(day) || { revenue: 0, fuel: 0, trips: 0 }
+    dailyMap.set(day, { ...cur, revenue: cur.revenue + Number(t.fare), trips: cur.trips + 1 })
+  })
+  filteredFuels.forEach((f) => {
+    const day = new Date(f.logged_at).toISOString().split("T")[0]
+    const cur = dailyMap.get(day) || { revenue: 0, fuel: 0, trips: 0 }
+    dailyMap.set(day, { ...cur, fuel: cur.fuel + Number(f.cost_amount) })
+  })
 
-    const dayTrips = filteredTrips.filter(
-      (t) => t.logged_at.split("T")[0] === dateStr
-    )
-    const dayFuels = filteredFuels.filter(
-      (f) => f.logged_at.split("T")[0] === dateStr
-    )
-
-    const dayRev = dayTrips.reduce((sum, t) => sum + Number(t.fare || 0), 0)
-    const dayFuel = dayFuels.reduce((sum, f) => sum + Number(f.cost_amount || 0), 0)
-
-    dailyStats.push({
-      date: label,
-      revenue: dayRev,
-      fuel: dayFuel,
-      trips: dayTrips.length,
-    })
-  }
+  const dailyStats = Array.from(dailyMap.entries())
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => a.date.localeCompare(b.date))
 
   return {
     revenue,
@@ -503,4 +568,11 @@ export async function getAnalytics(
     topCorridors,
     dailyStats,
   }
+}
+
+// ==========================================
+// 8. PURGE ALL SEED DATA (CLEAN SLATE RESET)
+// ==========================================
+export async function purgeAllSeedData(): Promise<{ success: boolean; message: string }> {
+  return await cleanSlateDatabase()
 }

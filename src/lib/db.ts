@@ -26,6 +26,9 @@ export interface Driver {
 export interface Trip {
   id: string
   driver_id: string
+  driver_name?: string
+  driver_initials?: string
+  vehicle?: string
   origin_name: string
   destination_name: string
   trip_type: "Regular" | "VIP"
@@ -39,6 +42,8 @@ export interface Trip {
 export interface FuelLog {
   id: string
   driver_id: string
+  driver_name?: string
+  vehicle?: string
   station_name: string
   cost_amount: number
   liters: number
@@ -72,6 +77,9 @@ export interface LedgerEntry {
   tone: "green" | "gold" | "red"
   status?: "Approved" | "Pending" | "Rejected"
   timestamp: string
+  driver_name?: string
+  driver_initials?: string
+  vehicle?: string
 }
 
 export interface DashboardMetrics {
@@ -101,183 +109,96 @@ export interface AnalyticsData {
 }
 
 // ==========================================
-// SEED DATA FOR MOCK & FIRST-TIME NEON DB
+// BASE STARTER DATA (LOCATIONS & DRIVERS ONLY - ZERO MOCK TRIPS/FUEL)
 // ==========================================
 
-const SEED_LOCATIONS: Location[] = [
-  { id: "loc_booysens", name: "Booysens", is_active: true, order_priority: 1, created_at: new Date(Date.now() - 86400000 * 30).toISOString() },
-  { id: "loc_rosettenville", name: "Rosettenville", is_active: true, order_priority: 2, created_at: new Date(Date.now() - 86400000 * 30).toISOString() },
-  { id: "loc_jhbcbd", name: "JHB CBD", is_active: true, order_priority: 3, created_at: new Date(Date.now() - 86400000 * 30).toISOString() },
-  { id: "loc_southgate", name: "Southgate", is_active: true, order_priority: 4, created_at: new Date(Date.now() - 86400000 * 30).toISOString() },
-  { id: "loc_sandton", name: "Sandton", is_active: true, order_priority: 5, created_at: new Date(Date.now() - 86400000 * 30).toISOString() },
-  { id: "loc_rosebank", name: "Rosebank", is_active: true, order_priority: 6, created_at: new Date(Date.now() - 86400000 * 30).toISOString() },
-  { id: "loc_goldreef", name: "Gold Reef City", is_active: true, order_priority: 7, created_at: new Date(Date.now() - 86400000 * 30).toISOString() },
+export const SEED_LOCATIONS: Location[] = [
+  { id: "loc_booysens", name: "Booysens", is_active: true, order_priority: 1, created_at: new Date().toISOString() },
+  { id: "loc_rosettenville", name: "Rosettenville", is_active: true, order_priority: 2, created_at: new Date().toISOString() },
+  { id: "loc_jhbcbd", name: "JHB CBD", is_active: true, order_priority: 3, created_at: new Date().toISOString() },
+  { id: "loc_southgate", name: "Southgate", is_active: true, order_priority: 4, created_at: new Date().toISOString() },
+  { id: "loc_sandton", name: "Sandton", is_active: true, order_priority: 5, created_at: new Date().toISOString() },
+  { id: "loc_rosebank", name: "Rosebank", is_active: true, order_priority: 6, created_at: new Date().toISOString() },
+  { id: "loc_goldreef", name: "Gold Reef City", is_active: true, order_priority: 7, created_at: new Date().toISOString() },
 ]
 
-const SEED_DRIVER: Driver = {
+export const SEED_DRIVER: Driver = {
   id: "driver_thabo_01",
   name: "Thabo Mokoena",
   phone: "+27 82 459 1024",
-  avatar_color: "#E5A93C",
+  avatar_color: "#10B981",
   initials: "TM",
   vehicle: "Toyota Quantum (GP 482-901)",
   status: "ACTIVE",
-  created_at: new Date(Date.now() - 86400000 * 60).toISOString(),
+  created_at: new Date().toISOString(),
 }
 
-// Generate relative dates for realistic presentation
-function getRelativeDate(daysAgo: number, hour: number, minute: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - daysAgo)
-  d.setHours(hour, minute, 0, 0)
-  return d.toISOString()
-}
+// ABSOLUTELY ZERO SAMPLE TRIPS OR FUEL LOGS FOR LIVE PRODUCTION
+export const SEED_TRIPS: Trip[] = []
+export const SEED_FUEL: FuelLog[] = []
 
-const SEED_TRIPS: Trip[] = [
-  {
-    id: "trip_001",
-    driver_id: "driver_thabo_01",
-    origin_name: "Booysens",
-    destination_name: "Rosettenville",
-    trip_type: "Regular",
-    fare: 60.0,
-    payment_method: "Cash",
-    note: "Morning commuter drop-off",
-    status: "Approved",
-    logged_at: getRelativeDate(0, 9, 42),
-  },
-  {
-    id: "trip_002",
-    driver_id: "driver_thabo_01",
-    origin_name: "Rosettenville",
-    destination_name: "Sandton",
-    trip_type: "VIP",
-    fare: 350.0,
-    payment_method: "Account",
-    note: "Corporate shuttle booking · VIP direct",
-    status: "Approved",
-    logged_at: getRelativeDate(0, 8, 15),
-  },
-  {
-    id: "trip_003",
-    driver_id: "driver_thabo_01",
-    origin_name: "JHB CBD",
-    destination_name: "Southgate",
-    trip_type: "Regular",
-    fare: 120.0,
-    payment_method: "Card",
-    note: "Evening commute",
-    status: "Approved",
-    logged_at: getRelativeDate(1, 17, 35),
-  },
-  {
-    id: "trip_004",
-    driver_id: "driver_thabo_01",
-    origin_name: "Gold Reef City",
-    destination_name: "Rosebank",
-    trip_type: "VIP",
-    fare: 420.0,
-    payment_method: "Account",
-    note: "Hotel conference transfer",
-    status: "Approved",
-    logged_at: getRelativeDate(1, 15, 10),
-  },
-  {
-    id: "trip_005",
-    driver_id: "driver_thabo_01",
-    origin_name: "Booysens",
-    destination_name: "JHB CBD",
-    trip_type: "Regular",
-    fare: 90.0,
-    payment_method: "Cash",
-    note: "Standard route passenger",
-    status: "Pending",
-    logged_at: getRelativeDate(1, 12, 22),
-  },
-  {
-    id: "trip_006",
-    driver_id: "driver_thabo_01",
-    origin_name: "Rosebank",
-    destination_name: "Sandton",
-    trip_type: "VIP",
-    fare: 380.0,
-    payment_method: "Account",
-    note: "Late executive shuttle",
-    status: "Pending",
-    logged_at: getRelativeDate(2, 20, 15),
-  },
-  {
-    id: "trip_007",
-    driver_id: "driver_thabo_01",
-    origin_name: "Sandton",
-    destination_name: "JHB CBD",
-    trip_type: "Regular",
-    fare: 140.0,
-    payment_method: "Card",
-    note: "Midday direct",
-    status: "Approved",
-    logged_at: getRelativeDate(2, 13, 0),
-  },
-  {
-    id: "trip_008",
-    driver_id: "driver_thabo_01",
-    origin_name: "Southgate",
-    destination_name: "Rosettenville",
-    trip_type: "Regular",
-    fare: 80.0,
-    payment_method: "Cash",
-    note: "Express",
-    status: "Approved",
-    logged_at: getRelativeDate(3, 10, 45),
-  },
-]
-
-const SEED_FUEL: FuelLog[] = [
-  {
-    id: "fuel_001",
-    driver_id: "driver_thabo_01",
-    station_name: "Shell Garage Rosettenville",
-    cost_amount: 350.0,
-    liters: 15.4,
-    odometer: 184250,
-    logged_at: getRelativeDate(0, 7, 28),
-  },
-  {
-    id: "fuel_002",
-    driver_id: "driver_thabo_01",
-    station_name: "Engen Booysens",
-    cost_amount: 500.0,
-    liters: 22.0,
-    odometer: 183890,
-    logged_at: getRelativeDate(2, 14, 10),
-  },
-  {
-    id: "fuel_003",
-    driver_id: "driver_thabo_01",
-    station_name: "TotalEnergies Gold Reef",
-    cost_amount: 420.0,
-    liters: 18.5,
-    odometer: 183420,
-    logged_at: getRelativeDate(4, 8, 45),
-  },
-]
-
-const SEED_PRICING_SETTINGS: PricingSetting[] = [
+export const SEED_PRICING_SETTINGS: PricingSetting[] = [
   { id: "set_regular_base", key: "regular_base_fare", value: "60.00" },
   { id: "set_vip_base", key: "vip_base_fare", value: "350.00" },
   { id: "set_fuel_target", key: "fuel_target_budget", value: "1500.00" },
 ]
 
+// Helper to compute initials from name
+export function computeInitials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+  return (name.trim().substring(0, 2) || "DR").toUpperCase()
+}
+
+// Color palettes for new drivers
+const DRIVER_COLORS = ["#10B981", "#F59E0B", "#3B82F6", "#8B5CF6", "#EC4899", "#14B8A6"]
+function getDriverColor(index: number): string {
+  return DRIVER_COLORS[index % DRIVER_COLORS.length]
+}
+
 // ==========================================
-// IN-MEMORY FALLBACK STORE (ACTIVE WHEN DATABASE_URL IS NOT SET)
+// IN-MEMORY FALLBACK STORE (CLEAN SLATE)
 // ==========================================
 
 class InMemoryStore {
   locations: Location[] = [...SEED_LOCATIONS]
   drivers: Driver[] = [SEED_DRIVER]
-  trips: Trip[] = [...SEED_TRIPS]
-  fuelLogs: FuelLog[] = [...SEED_FUEL]
+  trips: Trip[] = []
+  fuelLogs: FuelLog[] = []
   pricingSettings: PricingSetting[] = [...SEED_PRICING_SETTINGS]
+
+  getDrivers(): Driver[] {
+    return this.drivers
+  }
+
+  addDriver(name: string, vehicle: string, phone?: string): Driver {
+    const existing = this.drivers.find((d) => d.name.toLowerCase() === name.trim().toLowerCase())
+    if (existing) {
+      if (vehicle) existing.vehicle = vehicle
+      return existing
+    }
+    const newDriver: Driver = {
+      id: `driver_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: name.trim(),
+      phone: phone || "",
+      avatar_color: getDriverColor(this.drivers.length),
+      initials: computeInitials(name),
+      vehicle: vehicle.trim() || "Toyota Quantum (GP 482-901)",
+      status: "ACTIVE",
+      created_at: new Date().toISOString(),
+    }
+    this.drivers.push(newDriver)
+    return newDriver
+  }
+
+  updateDriverVehicle(driverId: string, vehicle: string): Driver | null {
+    const driver = this.drivers.find((d) => d.id === driverId)
+    if (!driver) return null
+    driver.vehicle = vehicle.trim()
+    return driver
+  }
 
   addLocation(name: string): Location {
     const existing = this.locations.find((l) => l.name.toLowerCase() === name.trim().toLowerCase())
@@ -294,16 +215,20 @@ class InMemoryStore {
   }
 
   addTrip(trip: Omit<Trip, "id" | "logged_at"> & { id?: string; logged_at?: string }): Trip {
+    const driver = this.drivers.find((d) => d.id === trip.driver_id) || this.drivers[0] || SEED_DRIVER
     const newTrip: Trip = {
       id: trip.id || `trip_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      driver_id: trip.driver_id || SEED_DRIVER.id,
+      driver_id: trip.driver_id || driver.id,
+      driver_name: trip.driver_name || driver.name,
+      driver_initials: trip.driver_initials || driver.initials,
+      vehicle: trip.vehicle || driver.vehicle,
       origin_name: trip.origin_name,
       destination_name: trip.destination_name,
       trip_type: trip.trip_type,
-      fare: Number(trip.fare),
+      fare: Number(trip.fare) || 0,
       payment_method: trip.payment_method || "Cash",
       note: trip.note || null,
-      status: trip.status || "Pending",
+      status: trip.status || "Approved",
       logged_at: trip.logged_at || new Date().toISOString(),
     }
     this.trips.unshift(newTrip)
@@ -311,12 +236,15 @@ class InMemoryStore {
   }
 
   addFuelLog(fuel: Omit<FuelLog, "id" | "logged_at"> & { id?: string; logged_at?: string }): FuelLog {
+    const driver = this.drivers.find((d) => d.id === fuel.driver_id) || this.drivers[0] || SEED_DRIVER
     const newFuel: FuelLog = {
       id: fuel.id || `fuel_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      driver_id: fuel.driver_id || SEED_DRIVER.id,
+      driver_id: fuel.driver_id || driver.id,
+      driver_name: fuel.driver_name || driver.name,
+      vehicle: fuel.vehicle || driver.vehicle,
       station_name: fuel.station_name,
-      cost_amount: Number(fuel.cost_amount),
-      liters: Number(fuel.liters),
+      cost_amount: Number(fuel.cost_amount) || 0,
+      liters: Number(fuel.liters) || 0,
       odometer: fuel.odometer !== undefined && fuel.odometer !== null ? Number(fuel.odometer) : null,
       logged_at: fuel.logged_at || new Date().toISOString(),
     }
@@ -329,6 +257,11 @@ class InMemoryStore {
     if (!trip) return null
     trip.status = status
     return trip
+  }
+
+  purgeData(): void {
+    this.trips = []
+    this.fuelLogs = []
   }
 }
 
@@ -362,8 +295,8 @@ export function getDbClient(): NeonQueryFunction<false, false> | null {
 }
 
 /**
- * Initializes tables and seeds initial data in Neon PostgreSQL.
- * Safe to run multiple times (idempotent `CREATE TABLE IF NOT EXISTS` and `ON CONFLICT DO NOTHING`).
+ * Initializes tables in Neon PostgreSQL with schema updates.
+ * Safe to run multiple times (idempotent).
  */
 export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: boolean }> {
   const sql = getDbClient()
@@ -415,21 +348,35 @@ export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: bo
       CREATE TABLE IF NOT EXISTS trips (
         id TEXT PRIMARY KEY,
         driver_id TEXT,
+        driver_name TEXT,
+        driver_initials TEXT,
+        vehicle TEXT,
         origin_name TEXT NOT NULL,
         destination_name TEXT NOT NULL,
         trip_type TEXT NOT NULL,
         fare NUMERIC(10,2) NOT NULL,
         payment_method TEXT NOT NULL,
         note TEXT,
-        status TEXT DEFAULT 'Pending',
+        status TEXT DEFAULT 'Approved',
         logged_at TIMESTAMPTZ DEFAULT NOW()
       );
     `
+
+    // Ensure columns exist if table was already created
+    try {
+      await sql`ALTER TABLE trips ADD COLUMN IF NOT EXISTS driver_name TEXT;`
+      await sql`ALTER TABLE trips ADD COLUMN IF NOT EXISTS driver_initials TEXT;`
+      await sql`ALTER TABLE trips ADD COLUMN IF NOT EXISTS vehicle TEXT;`
+    } catch {
+      // safe ignore
+    }
 
     await sql`
       CREATE TABLE IF NOT EXISTS fuel_logs (
         id TEXT PRIMARY KEY,
         driver_id TEXT,
+        driver_name TEXT,
+        vehicle TEXT,
         station_name TEXT NOT NULL,
         cost_amount NUMERIC(10,2) NOT NULL,
         liters NUMERIC(8,2) NOT NULL,
@@ -437,6 +384,13 @@ export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: bo
         logged_at TIMESTAMPTZ DEFAULT NOW()
       );
     `
+
+    try {
+      await sql`ALTER TABLE fuel_logs ADD COLUMN IF NOT EXISTS driver_name TEXT;`
+      await sql`ALTER TABLE fuel_logs ADD COLUMN IF NOT EXISTS vehicle TEXT;`
+    } catch {
+      // safe ignore
+    }
 
     await sql`
       CREATE TABLE IF NOT EXISTS pricing_settings (
@@ -446,20 +400,26 @@ export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: bo
       );
     `
 
-    // 2. Seed Default Driver
-    await sql`
-      INSERT INTO drivers (id, name, phone, avatar_color, initials, vehicle, status, created_at)
-      VALUES (${SEED_DRIVER.id}, ${SEED_DRIVER.name}, ${SEED_DRIVER.phone}, ${SEED_DRIVER.avatar_color}, ${SEED_DRIVER.initials}, ${SEED_DRIVER.vehicle}, ${SEED_DRIVER.status}, ${SEED_DRIVER.created_at})
-      ON CONFLICT (id) DO NOTHING;
-    `
-
-    // 3. Seed Default Locations
-    for (const loc of SEED_LOCATIONS) {
+    // 2. Seed Default Driver if drivers table is empty
+    const existingDrivers = await sql`SELECT count(*) as count FROM drivers;`
+    if (Number(existingDrivers[0]?.count || 0) === 0) {
       await sql`
-        INSERT INTO locations (id, name, is_active, order_priority, created_at)
-        VALUES (${loc.id}, ${loc.name}, ${loc.is_active}, ${loc.order_priority}, ${loc.created_at})
-        ON CONFLICT (name) DO NOTHING;
+        INSERT INTO drivers (id, name, phone, avatar_color, initials, vehicle, status, created_at)
+        VALUES (${SEED_DRIVER.id}, ${SEED_DRIVER.name}, ${SEED_DRIVER.phone}, ${SEED_DRIVER.avatar_color}, ${SEED_DRIVER.initials}, ${SEED_DRIVER.vehicle}, ${SEED_DRIVER.status}, ${SEED_DRIVER.created_at})
+        ON CONFLICT (id) DO NOTHING;
       `
+    }
+
+    // 3. Seed Default Locations if locations table is empty
+    const existingLocations = await sql`SELECT count(*) as count FROM locations;`
+    if (Number(existingLocations[0]?.count || 0) === 0) {
+      for (const loc of SEED_LOCATIONS) {
+        await sql`
+          INSERT INTO locations (id, name, is_active, order_priority, created_at)
+          VALUES (${loc.id}, ${loc.name}, ${loc.is_active}, ${loc.order_priority}, ${loc.created_at})
+          ON CONFLICT (name) DO NOTHING;
+        `
+      }
     }
 
     // 4. Seed Default Pricing Settings
@@ -471,29 +431,7 @@ export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: bo
       `
     }
 
-    // 5. Check if trips exist, if not seed initial sample trips
-    const existingTrips = await sql`SELECT count(*) as count FROM trips;`
-    if (Number(existingTrips[0]?.count || 0) === 0) {
-      for (const trip of SEED_TRIPS) {
-        await sql`
-          INSERT INTO trips (id, driver_id, origin_name, destination_name, trip_type, fare, payment_method, note, status, logged_at)
-          VALUES (${trip.id}, ${trip.driver_id}, ${trip.origin_name}, ${trip.destination_name}, ${trip.trip_type}, ${trip.fare}, ${trip.payment_method}, ${trip.note}, ${trip.status}, ${trip.logged_at})
-          ON CONFLICT (id) DO NOTHING;
-        `
-      }
-    }
-
-    // 6. Check if fuel logs exist, if not seed initial sample fuel logs
-    const existingFuel = await sql`SELECT count(*) as count FROM fuel_logs;`
-    if (Number(existingFuel[0]?.count || 0) === 0) {
-      for (const fuel of SEED_FUEL) {
-        await sql`
-          INSERT INTO fuel_logs (id, driver_id, station_name, cost_amount, liters, odometer, logged_at)
-          VALUES (${fuel.id}, ${fuel.driver_id}, ${fuel.station_name}, ${fuel.cost_amount}, ${fuel.liters}, ${fuel.odometer}, ${fuel.logged_at})
-          ON CONFLICT (id) DO NOTHING;
-        `
-      }
-    }
+    // NOTE: WE DO NOT SEED ANY DUMMY TRIPS OR FUEL LOGS!
 
     isDbInitialized = true
     return { mode: "neon", initialized: true }
@@ -501,4 +439,23 @@ export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: bo
     console.error("[FleetPulse DB] Error initializing Neon DB, falling back to mock mode:", error)
     return { mode: "mock", initialized: false }
   }
+}
+
+/**
+ * Wipes all dummy trips and fuel logs to ensure a completely clean slate.
+ */
+export async function cleanSlateDatabase(): Promise<{ success: boolean; message: string }> {
+  mockStore.purgeData()
+  const sql = getDbClient()
+  if (sql) {
+    try {
+      await sql`TRUNCATE TABLE trips;`
+      await sql`TRUNCATE TABLE fuel_logs;`
+      return { success: true, message: "Neon database wiped to clean slate. Zero trips and zero fuel logs." }
+    } catch (e) {
+      console.error("Failed to truncate neon tables:", e)
+      return { success: false, message: "Cleaned in-memory store; Neon truncate encountered: " + String(e) }
+    }
+  }
+  return { success: true, message: "In-memory store wiped to clean slate." }
 }

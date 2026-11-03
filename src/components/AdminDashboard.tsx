@@ -7,7 +7,7 @@ import { Sparkline } from "./Sparkline"
 import { RevenueChart } from "./RevenueChart"
 import { SettingsDrawer } from "./SettingsDrawer"
 import { updateTripStatus } from "@/app/actions"
-import type { Location, DashboardMetrics, Trip, FuelLog, LedgerEntry } from "@/lib/db"
+import { computeInitials, type Location, type DashboardMetrics, type Trip, type FuelLog } from "@/lib/db"
 
 interface AdminDashboardProps {
   onDriverView: () => void
@@ -82,6 +82,7 @@ export function AdminDashboard({
 }: AdminDashboardProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [tripFilter, setTripFilter] = useState("All trips")
+  const [driverFilter, setDriverFilter] = useState("All drivers")
   const [query, setQuery] = useState("")
   const [selectedLocation, setSelectedLocation] = useState("All locations")
   const [currentPage, setCurrentPage] = useState(1)
@@ -89,6 +90,14 @@ export function AdminDashboard({
 
   // Track status overrides locally for optimistic instant updates
   const [statusOverrides, setStatusOverrides] = useState<Record<string, "Approved" | "Pending" | "Rejected">>({})
+
+  const uniqueDrivers = useMemo(() => {
+    const set = new Set<string>()
+    trips.forEach((t) => {
+      if (t.driver_name) set.add(t.driver_name)
+    })
+    return Array.from(set)
+  }, [trips])
 
   // Format table rows from trips
   const initialRows: TableRowData[] = useMemo(() => {
@@ -101,15 +110,15 @@ export function AdminDashboard({
 
       return {
         id: t.id,
-        initials: "TM",
-        name: "Thabo Mokoena",
-        driverId: "DRV-018",
+        initials: t.driver_initials || computeInitials(t.driver_name || "Driver"),
+        name: t.driver_name || "Thabo Mokoena",
+        driverId: t.vehicle || "Toyota Quantum",
         type: t.trip_type,
         from: t.origin_name,
         to: t.destination_name,
         note: t.note || (t.trip_type === "VIP" ? "VIP Client Transfer" : "Standard Commute"),
         fuel: `−R ${approxFuel}.00`,
-        net: `R ${fare > 0 ? fare.toFixed(2) : netFare.toFixed(2)}`,
+        net: `R ${fare.toFixed(2)}`,
         status: (statusOverrides[t.id] || t.status) as "Approved" | "Pending" | "Rejected",
         color,
       }
@@ -125,13 +134,14 @@ export function AdminDashboard({
         row.to.toLowerCase().includes(query.toLowerCase()) ||
         row.note.toLowerCase().includes(query.toLowerCase())
       const matchType = tripFilter === "All trips" || row.type === tripFilter
+      const matchDriver = driverFilter === "All drivers" || row.name === driverFilter
       const matchLocation =
         selectedLocation === "All locations" ||
         row.from === selectedLocation ||
         row.to === selectedLocation
-      return matchQuery && matchType && matchLocation
+      return matchQuery && matchType && matchDriver && matchLocation
     })
-  }, [initialRows, tripFilter, query, selectedLocation])
+  }, [initialRows, tripFilter, driverFilter, query, selectedLocation])
 
   // Status toggle handler
   const handleToggleStatus = (id: string, currentStatus: "Approved" | "Pending" | "Rejected") => {
@@ -153,10 +163,11 @@ export function AdminDashboard({
 
   // Export report handler
   const handleExportReport = () => {
-    const headers = ["Trip ID", "Driver", "Type", "Origin", "Destination", "Note", "Amount", "Status"]
+    const headers = ["Trip ID", "Driver", "Vehicle", "Type", "Origin", "Destination", "Note", "Amount", "Status"]
     const rows = filteredRows.map((r) => [
       r.id,
-      r.name,
+      `"${r.name}"`,
+      `"${r.driverId}"`,
       r.type,
       `"${r.from}"`,
       `"${r.to}"`,
@@ -178,205 +189,192 @@ export function AdminDashboard({
   const pendingCount = filteredRows.filter((r) => r.status === "Pending").length
 
   // Pagination
-  const pageSize = 8
+  const pageSize = 10
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
   const paginatedRows = filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
-  // Top corridors count
-  const corridorList = [
-    { from: "Booysens", to: "Rosettenville", trips: "412", bar: "100%" },
-    { from: "Rosettenville", to: "JHB Central", trips: "285", bar: "69%" },
-    { from: "Booysens", to: "Gold Reef City", trips: "198", bar: "48%" },
-  ]
-
-  // Fuel ratio calculation
-  const fuelRatioPct = metrics.grossRevenue > 0
-    ? ((metrics.fuelExpense / metrics.grossRevenue) * 100).toFixed(1)
-    : "22.9"
-
   return (
-    <main className="admin-app">
-      <header className="topbar">
-        <Logo />
-        <div className="topbar-center">
-          <button type="button" className="driver-view-switch" onClick={onDriverView}>
-            <Icon name="car" size={16} /> Driver App
-          </button>
-          <span className="live-fleet">
-            <i /> <strong>12</strong> Drivers active
-          </span>
-          <button type="button" className="date-filter">
-            <Icon name="calendar" size={16} /> Nov 1 – Nov 30, 2026{" "}
-            <Icon name="chevron" size={14} />
-          </button>
-        </div>
-        <div className="admin-profile">
-          <button type="button" className="icon-button" aria-label="Notifications">
-            <Icon name="bell" />
-          </button>
-          <span className="top-divider" />
-          <span className="admin-avatar">ZN</span>
-          <span>
-            <strong>Zanele N.</strong>
-            <small>Fleet Administrator</small>
-          </span>
-          <Icon name="chevron" size={15} />
-        </div>
-      </header>
-
-      <div className="admin-content">
-        <div className="page-heading">
-          <div>
-            <span className="eyebrow">EXECUTIVE OVERVIEW</span>
-            <h1>Fleet performance</h1>
-            <p>
-              Monitor revenue, operations, and driver activity in real time.
-            </p>
+    <main className="admin-shell">
+      <div className="admin-wrap">
+        {/* Top Navbar */}
+        <header className="admin-nav">
+          <div className="nav-left">
+            <Logo />
+            <span className="live-counter">
+              <i /> Live Fleet · {trips.length} Trips
+            </span>
           </div>
-          <div>
+
+          <div className="nav-right">
+            <div className="date-badge">
+              <Icon name="calendar" size={15} />
+              <span>Nov 1 – Nov 30, 2026</span>
+            </div>
+
             <button
               type="button"
-              className="secondary-action"
-              onClick={handleExportReport}
+              className="quick-driver-switch"
+              onClick={onDriverView}
+              title="Open Mobile Driver App"
             >
-              <Icon name="download" size={17} /> Export report
+              <Icon name="car" size={16} />
+              <span>Driver View</span>
             </button>
+
             <button
               type="button"
-              className="primary-action"
+              className="icon-action-btn"
               onClick={() => setDrawerOpen(true)}
+              aria-label="Settings"
+              title="Fleet & Pricing Settings"
             >
-              <Icon name="settings" size={17} /> Pricing settings
+              <Icon name="settings" size={18} />
             </button>
-          </div>
-        </div>
 
-        {/* Real-time KPI Cards */}
+            <div className="admin-profile">
+              <span className="admin-avatar">FP</span>
+              <div className="admin-meta">
+                <strong>Fleet Manager</strong>
+                <small>zimthreadmu@gmail.com</small>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Top Metric Cards */}
         <section className="kpi-grid">
           <KpiCard
-            label="Total Gross Revenue"
-            value={`R ${metrics.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            label="TOTAL GROSS REVENUE"
+            value={`R ${metrics.grossRevenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
             icon="trend"
             spark="green"
           >
-            <span className="positive-pill">
-              <Icon name="trend" size={12} /> 18.4%
+            <span className="kpi-tag positive">
+              <Icon name="trend" size={13} /> {metrics.todayRevenue > 0 ? `+R${metrics.todayRevenue.toLocaleString()} today` : "Live telemetry"}
             </span>
-            <span>vs last month</span>
+            <small>Total customer fares collected</small>
           </KpiCard>
+
           <KpiCard
-            label="Total Fuel Expense"
-            value={`R ${metrics.fuelExpense.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+            label="TOTAL FUEL EXPENSE"
+            value={`R ${metrics.fuelExpense.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
             icon="fuel"
-            tone="expense"
+            spark="red"
           >
-            <div className="fuel-ratio">
-              <span>
-                <b>{fuelRatioPct}%</b> fuel ratio
-              </span>
-              <span className="progress">
-                <i style={{ width: `${Math.min(100, Number(fuelRatioPct))}%` }} />
-              </span>
-            </div>
+            <span className="kpi-tag negative">
+              <Icon name="fuel" size={13} /> {metrics.grossRevenue > 0 ? `${((metrics.fuelExpense / metrics.grossRevenue) * 100).toFixed(1)}%` : "0%"} of revenue
+            </span>
+            <small>Refuel station receipts</small>
           </KpiCard>
+
           <KpiCard
-            label="Net Operating Profit"
-            value={`R ${metrics.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-            icon="sparkles"
-            tone="profit"
+            label="NET OPERATING PROFIT"
+            value={`R ${metrics.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}`}
+            icon="check"
+            tone="featured"
             spark="green"
           >
-            <span className="positive-pill">
-              <Icon name="trend" size={12} /> 21.0%
+            <span className="kpi-tag highlight">
+              Net margin {metrics.grossRevenue > 0 ? `${Math.round((metrics.netProfit / metrics.grossRevenue) * 100)}%` : "100%"}
             </span>
-            <span>net margin growth</span>
+            <small>Gross revenue minus fuel</small>
           </KpiCard>
+
           <KpiCard
-            label="Trips Breakdown"
+            label="TRIPS BREAKDOWN"
             value={`${metrics.totalTrips} Trips`}
-            icon="route"
-            tone="trips"
+            icon="car"
+            spark="gold"
           >
-            <div className="trip-breakdown">
-              <span>
-                <i /> {metrics.regularTrips} Regular
-              </span>
-              <span>
-                <i /> {metrics.vipTrips} VIP
-              </span>
-              <small>{metrics.vipRatio}% VIP trips · High margin</small>
-            </div>
+            <span className="kpi-tag gold">
+              <Icon name="sparkles" size={12} /> {metrics.vipTrips} VIP ({metrics.vipRatio}%)
+            </span>
+            <small>{metrics.regularTrips} Regular journeys</small>
           </KpiCard>
         </section>
 
-        {/* Analytics Grid */}
+        {/* Analytics Section */}
         <section className="analytics-grid">
           <article className="panel chart-panel">
             <div className="panel-head">
               <div>
                 <span className="eyebrow">FINANCIAL FLOW</span>
-                <h2>Revenue vs. fuel outflow</h2>
+                <h2>Daily Revenue vs Fuel Outflow</h2>
               </div>
               <div className="chart-legend">
-                <span>
-                  <i className="revenue" />
-                  Revenue
+                <span className="legend-item rev">
+                  <i /> Total Revenue
                 </span>
-                <span>
-                  <i className="vip" />
-                  VIP revenue
+                <span className="legend-item vip">
+                  <i /> VIP Trips
                 </span>
-                <span>
-                  <i className="fuel" />
-                  Fuel
+                <span className="legend-item fuel">
+                  <i /> Fuel Expense
                 </span>
               </div>
             </div>
             <RevenueChart />
           </article>
+
           <article className="panel corridors-panel">
             <div className="panel-head">
               <div>
                 <span className="eyebrow">ROUTE INTELLIGENCE</span>
-                <h2>Top corridors</h2>
+                <h2>Top corridor routes</h2>
               </div>
-              <button type="button" aria-label="Filter corridors">
-                <Icon name="filter" size={16} />
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => setDrawerOpen(true)}
+              >
+                Manage zones
               </button>
             </div>
-            <div className="corridor-overview">
-              <div className="donut">
-                <div>
+
+            <div className="donut-wrap">
+              <div className="donut-chart">
+                <div className="donut-hole">
                   <strong>{metrics.totalTrips}</strong>
                   <span>Trips</span>
                 </div>
               </div>
               <div className="donut-legend">
-                <span>
-                  <i />
-                  Top 3 corridors <b>63%</b>
-                </span>
-                <span>
-                  <i />
-                  Other routes <b>37%</b>
-                </span>
+                <div>
+                  <span className="legend-dot green" />
+                  <span>Regular ({metrics.regularTrips})</span>
+                </div>
+                <div>
+                  <span className="legend-dot gold" />
+                  <span>VIP ({metrics.vipTrips})</span>
+                </div>
               </div>
             </div>
+
             <div className="corridor-list">
-              {corridorList.map((route, index) => (
-                <div className="corridor-row" key={route.to}>
-                  <span className="route-rank">0{index + 1}</span>
+              {[
+                {
+                  route: "Booysens ⇄ Rosettenville",
+                  trips: trips.filter((t) => t.origin_name.includes("Booysens") || t.destination_name.includes("Booysens")).length,
+                  pct: "Main commuter hub",
+                },
+                {
+                  route: "Rosettenville ⇄ JHB Central",
+                  trips: trips.filter((t) => t.origin_name.includes("Rosettenville") || t.destination_name.includes("Rosettenville")).length,
+                  pct: "Urban corridor",
+                },
+                {
+                  route: "Rosebank ⇄ Sandton VIP",
+                  trips: trips.filter((t) => t.trip_type === "VIP").length,
+                  pct: "Executive transfers",
+                },
+              ].map((c) => (
+                <div className="corridor-row" key={c.route}>
                   <div>
-                    <strong>
-                      {route.from} <Icon name="arrow" size={13} /> {route.to}
-                    </strong>
-                    <span className="route-bar">
-                      <i style={{ width: route.bar }} />
-                    </span>
+                    <strong>{c.route}</strong>
+                    <small>{c.pct}</small>
                   </div>
                   <b>
-                    {route.trips}
-                    <small>trips</small>
+                    {c.trips} trips
                   </b>
                 </div>
               ))}
@@ -404,7 +402,7 @@ export function AdminDashboard({
             <label className="search-box">
               <Icon name="search" size={17} />
               <input
-                placeholder="Search driver or route..."
+                placeholder="Search driver, route, or notes..."
                 value={query}
                 onChange={(event) => {
                   setQuery(event.target.value)
@@ -413,6 +411,27 @@ export function AdminDashboard({
               />
             </label>
             <div className="toolbar-filters">
+              {/* Filter by Driver */}
+              <label>
+                <Icon name="users" size={15} />
+                <select
+                  value={driverFilter}
+                  onChange={(event) => {
+                    setDriverFilter(event.target.value)
+                    setCurrentPage(1)
+                  }}
+                >
+                  <option>All drivers</option>
+                  {uniqueDrivers.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+                <Icon name="chevron" size={13} />
+              </label>
+
+              {/* Filter by Trip Type */}
               <label>
                 <Icon name="filter" size={15} />
                 <select
@@ -428,6 +447,8 @@ export function AdminDashboard({
                 </select>
                 <Icon name="chevron" size={13} />
               </label>
+
+              {/* Filter by Location */}
               <label>
                 <Icon name="location" size={15} />
                 <select
@@ -446,23 +467,29 @@ export function AdminDashboard({
                 </select>
                 <Icon name="chevron" size={13} />
               </label>
-              <button type="button">
-                <Icon name="calendar" size={15} /> Nov 2026{" "}
-                <Icon name="chevron" size={13} />
+
+              <button
+                type="button"
+                className="export-btn"
+                onClick={handleExportReport}
+                title="Download CSV ledger"
+              >
+                <Icon name="download" size={15} />
+                <span>Export CSV</span>
               </button>
             </div>
           </div>
-          <div className="table-scroll">
-            <table>
+
+          <div className="table-wrap">
+            <table className="ledger-table">
               <thead>
                 <tr>
-                  <th>Driver</th>
-                  <th>Trip type</th>
-                  <th>Route</th>
-                  <th>Client / notes</th>
-                  <th>Fuel deduction</th>
-                  <th>Net amount</th>
-                  <th>Audit status</th>
+                  <th>DRIVER & VEHICLE</th>
+                  <th>TYPE</th>
+                  <th>ROUTE</th>
+                  <th>PASSENGER / CLIENT NOTE</th>
+                  <th>FARE COLLECTED</th>
+                  <th>AUDIT STATUS</th>
                   <th aria-label="Actions" />
                 </tr>
               </thead>
@@ -499,20 +526,17 @@ export function AdminDashboard({
                       <span className="notes-cell">{row.note}</span>
                     </td>
                     <td>
-                      <span className="fuel-amount">{row.fuel}</span>
-                    </td>
-                    <td>
                       <strong className="net-amount">{row.net}</strong>
                     </td>
                     <td>
                       <button
                         type="button"
                         onClick={() => handleToggleStatus(row.id, row.status)}
-                        title="Click to toggle status"
                         className={`status-pill ${
                           row.status === "Approved" ? "approved" : "pending"
                         }`}
                         style={{ border: 0, cursor: "pointer" }}
+                        title="Click to toggle status"
                       >
                         <i />
                         {row.status}
@@ -522,24 +546,10 @@ export function AdminDashboard({
                       <div className="row-actions">
                         <button
                           type="button"
-                          title="Review trip details"
-                          onClick={() => alert(`Trip Details:\nRoute: ${row.from} → ${row.to}\nType: ${row.type}\nFare: ${row.net}\nStatus: ${row.status}`)}
-                        >
-                          <Icon name="search" size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          title="Toggle audit approval"
+                          title="Toggle audit status"
                           onClick={() => handleToggleStatus(row.id, row.status)}
                         >
-                          <Icon name="edit" size={15} />
-                        </button>
-                        <button
-                          type="button"
-                          title="Download receipt"
-                          onClick={() => alert(`Receipt downloaded for ${row.id}`)}
-                        >
-                          <Icon name="download" size={15} />
+                          <Icon name="check" size={14} />
                         </button>
                       </div>
                     </td>
@@ -547,39 +557,37 @@ export function AdminDashboard({
                 ))}
               </tbody>
             </table>
+
             {filteredRows.length === 0 && (
-              <div className="empty-state">
-                No ledger entries match your filters.
+              <div className="empty-state" style={{ padding: "48px 16px", textAlign: "center", color: "#697184" }}>
+                <p style={{ margin: "0 0 6px 0", fontSize: "14px", color: "#9ca5b4" }}>No trips logged yet.</p>
+                <p style={{ margin: 0, fontSize: "12px" }}>
+                  When drivers log regular or VIP journeys, real-time records will appear here automatically.
+                </p>
               </div>
             )}
           </div>
+
           <div className="table-footer">
             <span>
-              Showing {filteredRows.length > 0 ? (currentPage - 1) * pageSize + 1 : 0} to{" "}
+              Showing {filteredRows.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{" "}
               {Math.min(currentPage * pageSize, filteredRows.length)} of {filteredRows.length} entries
             </span>
             <div>
               <button
                 type="button"
-                disabled={currentPage <= 1}
-                onClick={() => setCurrentPage((p) => p - 1)}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
               >
                 Previous
               </button>
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <button
-                  type="button"
-                  key={i + 1}
-                  className={currentPage === i + 1 ? "active" : ""}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              <button type="button" className="active">
+                {currentPage}
+              </button>
               <button
                 type="button"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage((p) => p + 1)}
               >
                 Next
               </button>
@@ -588,17 +596,19 @@ export function AdminDashboard({
         </section>
       </div>
 
-      {/* Settings Drawer */}
-      <SettingsDrawer
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        locations={locations}
-        onLocationAdded={onLocationAdded}
-        regularRate={regularRate}
-        setRegularRate={setRegularRate}
-        multiplier={multiplier}
-        setMultiplier={setMultiplier}
-      />
+      {drawerOpen && (
+        <SettingsDrawer
+          isOpen={drawerOpen}
+          onClose={() => setDrawerOpen(false)}
+          locations={locations}
+          onLocationAdded={onLocationAdded}
+          regularRate={regularRate}
+          setRegularRate={setRegularRate}
+          multiplier={multiplier}
+          setMultiplier={setMultiplier}
+        />
+      )}
     </main>
   )
 }
+export default AdminDashboard

@@ -5,13 +5,19 @@ import { Icon } from "./Icon"
 import { Logo } from "./Logo"
 import { LogTripModal } from "./LogTripModal"
 import { LogFuelDrawer } from "./LogFuelDrawer"
+import DriverSwitcherModal from "./DriverSwitcherModal"
 import type { Location, Driver, Trip, FuelLog, LedgerEntry } from "@/lib/db"
 
 interface DriverAppProps {
   desktopPreview?: boolean
   onAdminView?: () => void
   locations: Location[]
-  driver: Driver
+  drivers: Driver[]
+  activeDriver: Driver
+  onSelectDriver: (driver: Driver) => void
+  onUpdateDriver: (driver: Driver) => void
+  onAddDriver: (driver: Driver) => void
+  onLocationAdded?: (location: Location) => void
   todayTrips: Trip[]
   allTrips: Trip[]
   fuelLogs: FuelLog[]
@@ -44,10 +50,10 @@ function DriverTrips({ trips }: { trips: Trip[] }) {
       </div>
       <div className="trip-summary-card">
         <div>
-          <span>NOVEMBER TRIPS</span>
+          <span>TOTAL LOGGED TRIPS</span>
           <strong>{trips.length}</strong>
           <small>
-            <b>+12%</b> from October
+            <b>{vipCount}</b> VIP journeys
           </small>
         </div>
         <div className="trip-ring">
@@ -71,169 +77,103 @@ function DriverTrips({ trips }: { trips: Trip[] }) {
         ))}
       </div>
       <div className="trip-history-list">
-        {visibleTrips.map((trip) => {
-          const isVip = trip.trip_type === "VIP"
-          return (
-            <article
-              className="trip-history-item"
-              key={trip.id}
-            >
-              <div className={`trip-history-icon ${trip.trip_type.toLowerCase()}`}>
-                <Icon
-                  name={isVip ? "sparkles" : "route"}
-                  size={17}
-                />
-              </div>
-              <div className="trip-history-copy">
-                <span className="trip-history-time">
-                  {new Date(trip.logged_at).toLocaleTimeString("en-ZA", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-                <strong>
-                  {trip.origin_name} <Icon name="arrow" size={13} /> {trip.destination_name}
-                </strong>
-                <small>
-                  <span className={trip.trip_type.toLowerCase()}>{trip.trip_type}</span>
-                  {trip.payment_method}
-                </small>
-              </div>
-              <div className="trip-history-fare">
-                <strong>R {Number(trip.fare).toFixed(2)}</strong>
-                <button type="button">Receipt</button>
-              </div>
-            </article>
-          )
-        })}
+        {visibleTrips.length === 0 ? (
+          <div style={{ padding: "36px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
+            No trips logged in this view yet.
+          </div>
+        ) : (
+          visibleTrips.map((trip) => {
+            const isVip = trip.trip_type === "VIP"
+            return (
+              <article
+                className="trip-history-item"
+                key={trip.id}
+              >
+                <div className={`trip-history-icon ${trip.trip_type.toLowerCase()}`}>
+                  <Icon
+                    name={isVip ? "sparkles" : "route"}
+                    size={17}
+                  />
+                </div>
+                <div className="trip-history-copy">
+                  <span className="trip-history-time">
+                    {new Date(trip.logged_at).toLocaleTimeString("en-ZA", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                  <strong>
+                    {trip.origin_name} <Icon name="arrow" size={13} /> {trip.destination_name}
+                  </strong>
+                  <small>
+                    <span className={trip.trip_type.toLowerCase()}>{trip.trip_type}</span>
+                    {trip.payment_method} · {trip.driver_name || "Driver"}
+                  </small>
+                </div>
+                <div className="trip-history-fare">
+                  <strong>R {Number(trip.fare).toFixed(2)}</strong>
+                  <span style={{ fontSize: "10px", color: "#697184" }}>{trip.status}</span>
+                </div>
+              </article>
+            )
+          })
+        )}
       </div>
-      <button type="button" className="load-more-button">
-        Load earlier trips
-      </button>
     </div>
   )
 }
 
 function DriverInsights({ trips, fuelLogs }: { trips: Trip[]; fuelLogs: FuelLog[] }) {
   const [range, setRange] = useState("Week")
-  const bars = [46, 70, 55, 84, 64, 92, 76]
-
-  const totalRev = trips.reduce((sum, t) => sum + Number(t.fare || 0), 0)
+  const totalRevenue = trips.reduce((sum, t) => sum + Number(t.fare || 0), 0)
   const totalFuel = fuelLogs.reduce((sum, f) => sum + Number(f.cost_amount || 0), 0)
-  const netEarnings = totalRev - totalFuel
-  const vipCount = trips.filter((t) => t.trip_type === "VIP").length
-  const vipShare = trips.length > 0 ? Math.round((vipCount / trips.length) * 100) : 24
-  const fuelRatio = totalRev > 0 ? ((totalFuel / totalRev) * 100).toFixed(1) : "18.2"
-  const avgFare = trips.length > 0 ? Math.round(totalRev / trips.length) : 214
+  const netEarnings = totalRevenue - totalFuel
 
   return (
     <div className="driver-tab-screen">
       <div className="tab-title-row">
         <div>
-          <span className="eyebrow">PERFORMANCE</span>
-          <h2>My insights</h2>
+          <span className="eyebrow">DRIVER ANALYTICS</span>
+          <h2>Shift Insights</h2>
         </div>
-        <button className="square-action" aria-label="Insight date range">
-          <Icon name="calendar" size={17} />
-        </button>
-      </div>
-      <div className="insight-range">
-        {["Week", "Month", "3 Months"].map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={range === item ? "active" : ""}
-            onClick={() => setRange(item)}
-          >
-            {item}
-          </button>
-        ))}
-      </div>
-      <div className="earnings-hero">
-        <span>NET EARNINGS</span>
-        <strong>R {netEarnings.toLocaleString(undefined, { minimumFractionDigits: 2 })}</strong>
-        <small>
-          <b>
-            <Icon name="trend" size={12} /> 14.8%
-          </b>{" "}
-          compared to last {range.toLowerCase()}
-        </small>
-        <div className="mobile-bar-chart">
-          {bars.map((height, index) => (
-            <div key={index}>
-              <i
-                style={{ height: `${height}%` }}
-                className={index === 5 ? "peak" : ""}
-              />
-              <span>{["M", "T", "W", "T", "F", "S", "S"][index]}</span>
-            </div>
+        <div className="range-pills">
+          {(["Day", "Week", "Month"] as const).map((item) => (
+            <button
+              type="button"
+              key={item}
+              className={range === item ? "active" : ""}
+              onClick={() => setRange(item)}
+            >
+              {item}
+            </button>
           ))}
         </div>
       </div>
-      <div className="insight-metrics">
-        <article>
-          <span className="mini-metric-icon green">
-            <Icon name="route" size={17} />
-          </span>
-          <div>
-            <small>TRIPS</small>
-            <strong>{trips.length}</strong>
-            <b>4.6 / day</b>
-          </div>
-        </article>
-        <article>
-          <span className="mini-metric-icon gold">
-            <Icon name="sparkles" size={17} />
-          </span>
-          <div>
-            <small>VIP SHARE</small>
-            <strong>{vipShare}%</strong>
-            <b>R 2,190</b>
-          </div>
-        </article>
-        <article>
-          <span className="mini-metric-icon red">
-            <Icon name="fuel" size={17} />
-          </span>
-          <div>
-            <small>FUEL RATIO</small>
-            <strong>{fuelRatio}%</strong>
-            <b>−2.1% better</b>
-          </div>
-        </article>
-        <article>
-          <span className="mini-metric-icon blue">
-            <Icon name="car" size={17} />
-          </span>
-          <div>
-            <small>AVG. FARE</small>
-            <strong>R {avgFare}</strong>
-            <b>+R 18</b>
-          </div>
-        </article>
-      </div>
-      <div className="driver-panel">
-        <div className="driver-panel-head">
-          <div>
-            <span className="eyebrow">TOP ROUTES</span>
-            <h3>Best corridors</h3>
-          </div>
-          <span>Net earned</span>
+
+      <div className="earnings-hero-card">
+        <span>TOTAL NET EARNINGS</span>
+        <strong>R {netEarnings.toLocaleString()}</strong>
+        <div className="earnings-hero-foot">
+          <span>Gross: R {totalRevenue.toLocaleString()}</span>
+          <span>Fuel: -R {totalFuel.toLocaleString()}</span>
         </div>
-        {[
-          ["Booysens → Rosettenville", "12 trips", "R 1,440"],
-          ["Rosettenville → Sandton", "6 trips", "R 1,310"],
-          ["JHB CBD → Southgate", "8 trips", "R 960"],
-        ].map((route, index) => (
-          <div className="driver-route-row" key={route[0]}>
-            <span>0{index + 1}</span>
-            <div>
-              <strong>{route[0]}</strong>
-              <small>{route[1]}</small>
-            </div>
-            <b>{route[2]}</b>
-          </div>
-        ))}
+      </div>
+
+      <div className="stats-2col">
+        <div className="mini-stat-card">
+          <span>COMPLETED TRIPS</span>
+          <strong>{trips.length}</strong>
+          <small>
+            <b style={{ color: "#20d59b" }}>{trips.filter((t) => t.trip_type === "VIP").length}</b> VIP
+          </small>
+        </div>
+        <div className="mini-stat-card">
+          <span>FUEL ENTRIES</span>
+          <strong>{fuelLogs.length}</strong>
+          <small>
+            <b>{fuelLogs.reduce((s, f) => s + Number(f.liters || 0), 0).toFixed(1)}L</b> pumped
+          </small>
+        </div>
       </div>
     </div>
   )
@@ -244,14 +184,15 @@ function DriverSettingsTab({
   onDuty,
   setOnDuty,
   onAdminView,
+  onOpenDriverSwitcher,
 }: {
   driver: Driver
   onDuty: boolean
-  setOnDuty: (value: boolean) => void
+  setOnDuty: (duty: boolean) => void
   onAdminView?: () => void
+  onOpenDriverSwitcher: () => void
 }) {
   const [notifications, setNotifications] = useState(true)
-  const [biometrics, setBiometrics] = useState(false)
 
   return (
     <div className="driver-tab-screen">
@@ -260,34 +201,52 @@ function DriverSettingsTab({
           <span className="eyebrow">DRIVER ACCOUNT</span>
           <h2>Settings</h2>
         </div>
-        <button className="square-action" aria-label="Edit profile">
+        <button
+          className="square-action"
+          aria-label="Edit profile"
+          onClick={onOpenDriverSwitcher}
+        >
           <Icon name="edit" size={17} />
         </button>
       </div>
-      <div className="profile-card">
-        <span className="profile-avatar">
-          {driver.initials || "TM"}
+
+      <div
+        className="profile-card"
+        onClick={onOpenDriverSwitcher}
+        style={{ cursor: "pointer" }}
+        title="Click to switch driver or change vehicle"
+      >
+        <span
+          className="profile-avatar"
+          style={{ background: driver.avatar_color || "#10B981", color: "#03261d" }}
+        >
+          {driver.initials || "DR"}
           <i />
         </span>
         <div>
-          <strong>{driver.name || "Thabo Mokoena"}</strong>
-          <span>Driver ID · {driver.id ? "DRV-018" : "DRV-018"}</span>
+          <strong>{driver.name}</strong>
+          <span>Assigned: {driver.vehicle}</span>
           <small>
-            <Icon name="check" size={11} /> Verified driver
+            <Icon name="check" size={11} /> Tap to switch driver profile
           </small>
         </div>
         <Icon name="chevron" size={16} />
       </div>
+
       <div className="settings-group">
         <span className="settings-label">SHIFT & VEHICLE</span>
         <div className="settings-list">
-          <div className="setting-row">
+          <div
+            className="setting-row"
+            onClick={onOpenDriverSwitcher}
+            style={{ cursor: "pointer" }}
+          >
             <span className="setting-icon green">
               <Icon name="car" size={17} />
             </span>
             <div>
-              <strong>{driver.vehicle || "Toyota Rumion · DX 44 GP"}</strong>
-              <small>Assigned vehicle</small>
+              <strong>{driver.vehicle || "Toyota Quantum (GP 482-901)"}</strong>
+              <small>Tap to change assigned vehicle</small>
             </div>
             <Icon name="chevron" size={15} />
           </div>
@@ -298,9 +257,7 @@ function DriverSettingsTab({
             <div>
               <strong>Duty status</strong>
               <small>
-                {onDuty
-                  ? "You’re visible to dispatch"
-                  : "You’re currently unavailable"}
+                {onDuty ? "You’re on active duty" : "You’re currently off duty"}
               </small>
             </div>
             <button
@@ -314,6 +271,7 @@ function DriverSettingsTab({
           </div>
         </div>
       </div>
+
       <div className="settings-group">
         <span className="settings-label">APP PREFERENCES</span>
         <div className="settings-list">
@@ -330,23 +288,6 @@ function DriverSettingsTab({
               className={`mini-toggle ${notifications ? "active" : ""}`}
               onClick={() => setNotifications(!notifications)}
               aria-label="Toggle notifications"
-            >
-              <i />
-            </button>
-          </div>
-          <div className="setting-row">
-            <span className="setting-icon">
-              <Icon name="settings" size={17} />
-            </span>
-            <div>
-              <strong>Biometric sign-in</strong>
-              <small>Use device authentication</small>
-            </div>
-            <button
-              type="button"
-              className={`mini-toggle ${biometrics ? "active" : ""}`}
-              onClick={() => setBiometrics(!biometrics)}
-              aria-label="Toggle biometrics"
             >
               <i />
             </button>
@@ -369,30 +310,6 @@ function DriverSettingsTab({
           )}
         </div>
       </div>
-      <div className="settings-group">
-        <span className="settings-label">SUPPORT</span>
-        <div className="settings-list">
-          <button type="button" className="setting-row button-row">
-            <span className="setting-icon">
-              <Icon name="users" size={17} />
-            </span>
-            <div>
-              <strong>Contact fleet support</strong>
-              <small>Available 24 hours</small>
-            </div>
-            <Icon name="chevron" size={15} />
-          </button>
-          <button type="button" className="setting-row button-row danger-row">
-            <span className="setting-icon red">
-              <Icon name="arrow" size={17} />
-            </span>
-            <div>
-              <strong>Sign out</strong>
-              <small>FleetPulse Driver v2.4.0</small>
-            </div>
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
@@ -401,7 +318,12 @@ export function DriverApp({
   desktopPreview = false,
   onAdminView,
   locations,
-  driver,
+  drivers,
+  activeDriver,
+  onSelectDriver,
+  onUpdateDriver,
+  onAddDriver,
+  onLocationAdded,
   todayTrips,
   allTrips,
   fuelLogs,
@@ -414,74 +336,46 @@ export function DriverApp({
   const [onDuty, setOnDuty] = useState(true)
   const [tripSheetOpen, setTripSheetOpen] = useState(false)
   const [fuelDrawerOpen, setFuelDrawerOpen] = useState(false)
+  const [driverSwitcherOpen, setDriverSwitcherOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<"shift" | "trips" | "insights" | "settings">("shift")
 
-  // Dynamic calculations for today
-  const todayRev = todayTrips.reduce((sum, t) => sum + Number(t.fare || 0), 0)
   const today = new Date().toDateString()
-  const todayFuels = fuelLogs.filter(
+  const todayTripsList = allTrips.filter(
+    (t) => new Date(t.logged_at).toDateString() === today
+  )
+  const todayFuelList = fuelLogs.filter(
     (f) => new Date(f.logged_at).toDateString() === today
   )
-  const todayFuel = todayFuels.reduce((sum, f) => sum + Number(f.cost_amount || 0), 0)
+
+  const todayRev = todayTripsList.reduce((acc, t) => acc + Number(t.fare || 0), 0)
+  const todayFuel = todayFuelList.reduce((acc, f) => acc + Number(f.cost_amount || 0), 0)
   const todayNet = todayRev - todayFuel
 
   return (
-    <main
-      className={`mobile-shell ${
-        desktopPreview ? "desktop-driver-preview" : ""
-      }`}
-    >
-      {desktopPreview && (
-        <aside className="driver-preview-intro">
-          <button type="button" className="back-to-admin" onClick={onAdminView}>
-            <Icon name="arrow" size={16} /> Back to admin dashboard
-          </button>
-          <span className="eyebrow">DRIVER FIELD APP</span>
-          <h1>The frontend your drivers use on every shift.</h1>
-          <p>
-            A focused mobile workspace for logging journeys, fuel expenses, and
-            VIP account trips from the road.
-          </p>
-          <div className="preview-feature-list">
-            <span>
-              <i>
-                <Icon name="check" size={14} />
-              </i>
-              One-tap trip and fuel logging
-            </span>
-            <span>
-              <i>
-                <Icon name="check" size={14} />
-              </i>
-              Live earnings and shift activity
-            </span>
-            <span>
-              <i>
-                <Icon name="check" size={14} />
-              </i>
-              Standard and VIP account fares
-            </span>
-          </div>
-        </aside>
-      )}
+    <main className="mobile-shell">
+      <div className="driver-preview-intro">
+        <Logo />
+        <span className="badge">Driver App View</span>
+      </div>
 
       <section className="driver-app">
         <header className="driver-header">
           <div className="driver-brand-row">
-            <Logo />
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Logo compact />
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
               <button
                 type="button"
                 className={`duty-toggle ${onDuty ? "active" : ""}`}
                 onClick={() => setOnDuty(!onDuty)}
+                aria-pressed={onDuty}
               >
-                <span className="live-dot" /> {onDuty ? "On Duty" : "Off Duty"}
+                <span className="live-dot" />
+                <span>{onDuty ? "On Duty" : "Off Duty"}</span>
               </button>
-              {onAdminView && !desktopPreview && (
+              {onAdminView && (
                 <button
                   type="button"
                   onClick={onAdminView}
-                  title="Switch to Admin Dashboard"
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -494,6 +388,7 @@ export function DriverApp({
                     color: "#9ff0d2",
                     fontSize: "10px",
                     fontWeight: 700,
+                    cursor: "pointer",
                   }}
                 >
                   <Icon name="trend" size={12} /> Admin
@@ -501,6 +396,8 @@ export function DriverApp({
               )}
             </div>
           </div>
+
+          {/* GREETING ROW — STRICTLY "Morning, Driver" */}
           <div className="greeting-row">
             <div>
               <span className="eyebrow">
@@ -514,7 +411,7 @@ export function DriverApp({
               </span>
               <h1>
                 {activeTab === "shift"
-                  ? `Morning, ${driver.name ? driver.name.split(" ")[0] : "Thabo"}`
+                  ? "Morning, Driver"
                   : activeTab === "trips"
                     ? "Trip history"
                     : activeTab === "insights"
@@ -522,13 +419,42 @@ export function DriverApp({
                       : "Your account"}
               </h1>
             </div>
-            <button type="button" className="avatar-button" aria-label="Open profile">
-              {driver.initials || "TM"}
+
+            {/* Profile Avatar — opens Driver Switcher */}
+            <button
+              type="button"
+              className="avatar-button"
+              aria-label="Select Driver Profile"
+              onClick={() => setDriverSwitcherOpen(true)}
+              style={{
+                background: activeDriver.avatar_color || "#10B981",
+                color: "#ffffff",
+                cursor: "pointer",
+              }}
+              title="Click to switch driver or change vehicle"
+            >
+              {activeDriver.initials || "DR"}
             </button>
           </div>
-          <div className="vehicle-badge">
-            <Icon name="car" size={15} /> {driver.vehicle || "Toyota Rumion · DX 44 GP"}
-          </div>
+
+          {/* Assigned Vehicle Badge — clickable to change vehicle */}
+          <button
+            type="button"
+            className="vehicle-badge"
+            onClick={() => setDriverSwitcherOpen(true)}
+            title="Click to change vehicle"
+            style={{
+              background: "transparent",
+              border: 0,
+              cursor: "pointer",
+              padding: 0,
+              color: "inherit",
+              font: "inherit",
+            }}
+          >
+            <Icon name="car" size={15} /> {activeDriver.vehicle || "Toyota Quantum (GP 482-901)"}
+            <span style={{ fontSize: "10px", color: "#20d59b", marginLeft: "4px" }}>• Change</span>
+          </button>
         </header>
 
         <section
@@ -540,9 +466,9 @@ export function DriverApp({
             <>
               <div className="today-card">
                 <div className="today-card-head">
-                  <span>Today’s performance</span>
+                  <span>TODAY’S SHIFT ACTIVITY</span>
                   <span className="trend-label">
-                    <Icon name="trend" size={14} /> 12.4%
+                    <Icon name="trend" size={14} /> Live
                   </span>
                 </div>
                 <div className="mobile-metrics">
@@ -603,34 +529,43 @@ export function DriverApp({
               </div>
 
               <div className="shift-feed">
-                {ledgerEntries.slice(0, 5).map((item) => (
-                  <article className="shift-item" key={item.id}>
-                    <div className={`log-icon ${item.tone}`}>
-                      <Icon
-                        name={
-                          item.type === "fuel"
-                            ? "fuel"
-                            : item.tone === "gold"
-                              ? "sparkles"
-                              : "route"
-                        }
-                        size={18}
-                      />
-                    </div>
-                    <div className="log-copy">
-                      <div className="log-title">
-                        <strong>{item.title}</strong>
-                        <time>{item.time}</time>
+                {ledgerEntries.length === 0 ? (
+                  <div style={{ padding: "36px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
+                    <p style={{ margin: "0 0 6px 0", color: "#a5acba" }}>No shift activity logged yet.</p>
+                    <p style={{ margin: 0, fontSize: "11px", color: "#626978" }}>
+                      Tap <strong style={{ color: "#20d59b" }}>+ Log Trip</strong> or <strong style={{ color: "#f5ad36" }}>⛽ Log Fuel</strong> to record your first entry.
+                    </p>
+                  </div>
+                ) : (
+                  ledgerEntries.slice(0, 5).map((item) => (
+                    <article className="shift-item" key={item.id}>
+                      <div className={`log-icon ${item.tone}`}>
+                        <Icon
+                          name={
+                            item.type === "fuel"
+                              ? "fuel"
+                              : item.tone === "gold"
+                                ? "sparkles"
+                                : "route"
+                          }
+                          size={18}
+                        />
                       </div>
-                      <div className="log-meta">
-                        <span className={`tag ${item.tone}`}>
-                          {item.detail}
-                        </span>
-                        <b className={item.tone}>{item.amount}</b>
+                      <div className="log-copy">
+                        <div className="log-title">
+                          <strong>{item.title}</strong>
+                          <time>{item.time}</time>
+                        </div>
+                        <div className="log-meta">
+                          <span className={`tag ${item.tone}`}>
+                            {item.detail}
+                          </span>
+                          <b className={item.tone}>{item.amount}</b>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  ))
+                )}
               </div>
             </>
           )}
@@ -643,10 +578,11 @@ export function DriverApp({
 
           {activeTab === "settings" && (
             <DriverSettingsTab
-              driver={driver}
+              driver={activeDriver}
               onDuty={onDuty}
               setOnDuty={setOnDuty}
               onAdminView={onAdminView}
+              onOpenDriverSwitcher={() => setDriverSwitcherOpen(true)}
             />
           )}
         </section>
@@ -686,12 +622,14 @@ export function DriverApp({
           </button>
         </nav>
 
-        {/* Log Trip Modal */}
+        {/* Log Trip Modal (with direct fare entry and on-the-fly location adding) */}
         <LogTripModal
           isOpen={tripSheetOpen}
           onClose={() => setTripSheetOpen(false)}
           locations={locations}
+          activeDriver={activeDriver}
           onTripLogged={onTripLogged}
+          onLocationAdded={onLocationAdded}
           baseFare={baseFare}
           vipMultiplier={vipMultiplier}
         />
@@ -700,33 +638,54 @@ export function DriverApp({
         <LogFuelDrawer
           isOpen={fuelDrawerOpen}
           onClose={() => setFuelDrawerOpen(false)}
+          activeDriver={activeDriver}
           onFuelLogged={onFuelLogged}
         />
+
+        {/* Driver Switcher & Vehicle Selector Modal */}
+        {driverSwitcherOpen && (
+          <DriverSwitcherModal
+            drivers={drivers}
+            activeDriver={activeDriver}
+            onSelectDriver={(drv) => {
+              onSelectDriver(drv)
+              setDriverSwitcherOpen(false)
+            }}
+            onUpdateDriver={onUpdateDriver}
+            onAddDriver={onAddDriver}
+            onClose={() => setDriverSwitcherOpen(false)}
+          />
+        )}
       </section>
 
       {desktopPreview && (
         <aside className="driver-preview-guide">
           <span className="preview-status">
-            <i /> Interactive preview
+            <i /> Live Driver View
           </span>
-          <h2>Try the driver flow</h2>
+          <h2>Field Operations Flow</h2>
           <ol>
             <li>
               <span>01</span>
-              Select <strong>Log Trip</strong> or <strong>Log Fuel</strong>
+              Tap <strong>+ Log Trip</strong> or <strong>⛽ Log Fuel</strong>
             </li>
             <li>
               <span>02</span>
-              Choose Standard or VIP
+              Choose or add new locations on the fly
             </li>
             <li>
               <span>03</span>
-              Adjust fare and submit to cloud
+              Enter trip fare directly and submit
+            </li>
+            <li>
+              <span>04</span>
+              Tap profile avatar to switch driver or vehicle
             </li>
           </ol>
-          <small>Desktop preview · Driver viewport 390px</small>
+          <small>Driver viewport 390px · Progressive Web App ready</small>
         </aside>
       )}
     </main>
   )
 }
+export default DriverApp
