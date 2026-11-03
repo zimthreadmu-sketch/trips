@@ -9,6 +9,7 @@ export type IconName =
   | "car"
   | "check"
   | "chevron"
+  | "clock"
   | "close"
   | "download"
   | "edit"
@@ -51,6 +52,12 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     ),
     check: <path d="m5 12 4 4L19 6" />,
     chevron: <path d="m9 18 6-6-6-6" />,
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </>
+    ),
     close: <path d="M18 6 6 18M6 6l12 12" />,
     download: (
       <>

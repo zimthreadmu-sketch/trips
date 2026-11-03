@@ -143,6 +143,8 @@ export function FleetPulseApp({
       numericAmount: Number(newTrip.fare),
       tone: newTrip.trip_type === "VIP" ? "gold" : "green",
       status: newTrip.status,
+      payment_status: newTrip.payment_status || "Paid",
+      payment_method: newTrip.payment_method || "Cash",
       timestamp: newTrip.logged_at,
       driver_name: newTrip.driver_name || activeDriver.name,
       driver_initials: newTrip.driver_initials || activeDriver.initials,
@@ -168,6 +170,47 @@ export function FleetPulseApp({
         regularTrips,
         vipTrips,
         vipRatio,
+        todayRevenue,
+        netProfit,
+      }
+    })
+  }
+
+  // Handle trip updated (after-the-trip edits or payment status change)
+  const handleTripUpdated = (updatedTrip: Trip) => {
+    setTrips((prev) => prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t)))
+    setTodayTrips((prev) => prev.map((t) => (t.id === updatedTrip.id ? updatedTrip : t)))
+
+    setLedgerEntries((prev) =>
+      prev.map((entry) => {
+        if (entry.id === updatedTrip.id) {
+          return {
+            ...entry,
+            title: `${updatedTrip.origin_name} → ${updatedTrip.destination_name}`,
+            detail: updatedTrip.trip_type === "VIP" ? "VIP Trip" : "Regular trip",
+            amount: `Rs ${Number(updatedTrip.fare).toFixed(2)}`,
+            numericAmount: Number(updatedTrip.fare),
+            tone: updatedTrip.trip_type === "VIP" ? "gold" : "green",
+            status: updatedTrip.status,
+            payment_status: updatedTrip.payment_status || "Paid",
+            payment_method: updatedTrip.payment_method || "Cash",
+          }
+        }
+        return entry
+      })
+    )
+
+    // Recalculate metrics dynamically
+    setMetrics((prev) => {
+      const oldTrip = trips.find((t) => t.id === updatedTrip.id)
+      const fareDiff = Number(updatedTrip.fare) - Number(oldTrip?.fare || 0)
+      const grossRevenue = prev.grossRevenue + fareDiff
+      const todayRevenue = prev.todayRevenue + fareDiff
+      const netProfit = grossRevenue - prev.fuelExpense
+
+      return {
+        ...prev,
+        grossRevenue,
         todayRevenue,
         netProfit,
       }
@@ -246,6 +289,7 @@ export function FleetPulseApp({
           fuelLogs={fuelLogs}
           ledgerEntries={ledgerEntries}
           onTripLogged={handleTripLogged}
+          onTripUpdated={handleTripUpdated}
           onFuelLogged={handleFuelLogged}
           baseFare={regularRate}
           vipMultiplier={multiplier}

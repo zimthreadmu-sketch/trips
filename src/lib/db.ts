@@ -33,7 +33,8 @@ export interface Trip {
   destination_name: string
   trip_type: "Regular" | "VIP"
   fare: number
-  payment_method: "Cash" | "Card" | "Account" | string
+  payment_method: "Cash" | "Card" | "Account" | "Juice" | string
+  payment_status: "Paid" | "Pending"
   note: string | null
   status: "Approved" | "Pending" | "Rejected"
   logged_at: string
@@ -76,6 +77,8 @@ export interface LedgerEntry {
   numericAmount: number
   tone: "green" | "gold" | "red"
   status?: "Approved" | "Pending" | "Rejected"
+  payment_status?: "Paid" | "Pending"
+  payment_method?: string
   timestamp: string
   driver_name?: string
   driver_initials?: string
@@ -217,12 +220,20 @@ class InMemoryStore {
       trip_type: trip.trip_type,
       fare: Number(trip.fare) || 0,
       payment_method: trip.payment_method || "Cash",
+      payment_status: trip.payment_status || "Paid",
       note: trip.note || null,
       status: trip.status || "Approved",
       logged_at: trip.logged_at || new Date().toISOString(),
     }
     this.trips.unshift(newTrip)
     return newTrip
+  }
+
+  updateTrip(tripId: string, updates: Partial<Trip>): Trip | null {
+    const trip = this.trips.find((t) => t.id === tripId)
+    if (!trip) return null
+    Object.assign(trip, updates)
+    return trip
   }
 
   addFuelLog(fuel: Omit<FuelLog, "id" | "logged_at"> & { id?: string; logged_at?: string }): FuelLog {
@@ -347,6 +358,7 @@ export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: bo
         trip_type TEXT NOT NULL,
         fare NUMERIC(10,2) NOT NULL,
         payment_method TEXT NOT NULL,
+        payment_status TEXT DEFAULT 'Paid',
         note TEXT,
         status TEXT DEFAULT 'Approved',
         logged_at TIMESTAMPTZ DEFAULT NOW()
@@ -358,6 +370,7 @@ export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: bo
       await sql`ALTER TABLE trips ADD COLUMN IF NOT EXISTS driver_name TEXT;`
       await sql`ALTER TABLE trips ADD COLUMN IF NOT EXISTS driver_initials TEXT;`
       await sql`ALTER TABLE trips ADD COLUMN IF NOT EXISTS vehicle TEXT;`
+      await sql`ALTER TABLE trips ADD COLUMN IF NOT EXISTS payment_status TEXT DEFAULT 'Paid';`
     } catch {
       // safe ignore
     }

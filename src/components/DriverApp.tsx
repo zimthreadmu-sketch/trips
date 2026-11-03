@@ -4,8 +4,10 @@ import { useState } from "react"
 import { Icon } from "./Icon"
 import { Logo } from "./Logo"
 import { LogTripModal } from "./LogTripModal"
+import { EditTripModal } from "./EditTripModal"
 import { LogFuelDrawer } from "./LogFuelDrawer"
 import DriverSwitcherModal from "./DriverSwitcherModal"
+import { toggleTripPaymentStatus } from "@/app/actions"
 import type { Location, Driver, Trip, FuelLog, LedgerEntry } from "@/lib/db"
 
 interface DriverAppProps {
@@ -23,6 +25,7 @@ interface DriverAppProps {
   fuelLogs: FuelLog[]
   ledgerEntries: LedgerEntry[]
   onTripLogged: (trip: Trip) => void
+  onTripUpdated?: (trip: Trip) => void
   onFuelLogged: (fuel: FuelLog) => void
   baseFare?: number
   vipMultiplier?: number
@@ -31,14 +34,28 @@ interface DriverAppProps {
 // ==========================================
 // 1. TRIPS TAB (JOURNEY HISTORY)
 // ==========================================
-function DriverTripsTab({ trips }: { trips: Trip[] }) {
-  const [filter, setFilter] = useState<"All" | "Regular" | "VIP">("All")
+function DriverTripsTab({
+  trips,
+  onEditTrip,
+  onTogglePayment,
+}: {
+  trips: Trip[]
+  onEditTrip: (trip: Trip) => void
+  onTogglePayment: (trip: Trip, e?: React.MouseEvent) => void
+}) {
+  const [filter, setFilter] = useState<"All" | "Paid" | "Pending" | "VIP">("All")
 
-  const visibleTrips = trips.filter(
-    (trip) => filter === "All" || trip.trip_type === filter
-  )
+  const visibleTrips = trips.filter((trip) => {
+    if (filter === "All") return true
+    if (filter === "VIP") return trip.trip_type === "VIP"
+    const status = trip.payment_status || (trip.status === "Pending" ? "Pending" : "Paid")
+    return status === filter
+  })
 
   const vipCount = trips.filter((t) => t.trip_type === "VIP").length
+  const pendingCount = trips.filter(
+    (t) => (t.payment_status || (t.status === "Pending" ? "Pending" : "Paid")) === "Pending"
+  ).length
 
   return (
     <div className="driver-tab-screen">
@@ -54,7 +71,8 @@ function DriverTripsTab({ trips }: { trips: Trip[] }) {
           <span>TOTAL LOGGED TRIPS</span>
           <strong>{trips.length}</strong>
           <small>
-            <b>{vipCount}</b> VIP journeys
+            <b>{vipCount}</b> VIP journeys ·{" "}
+            <b style={{ color: pendingCount > 0 ? "#f5ad36" : "#20d59b" }}>{pendingCount}</b> pending
           </small>
         </div>
         <div className="trip-ring">
@@ -66,7 +84,7 @@ function DriverTripsTab({ trips }: { trips: Trip[] }) {
       </div>
 
       <div className="tab-filter">
-        {(["All", "Regular", "VIP"] as const).map((item) => (
+        {(["All", "Paid", "Pending", "VIP"] as const).map((item) => (
           <button
             key={item}
             type="button"
@@ -74,7 +92,24 @@ function DriverTripsTab({ trips }: { trips: Trip[] }) {
             onClick={() => setFilter(item)}
           >
             {item === "VIP" && <Icon name="sparkles" size={12} />}
+            {item === "Paid" && <Icon name="check" size={12} />}
+            {item === "Pending" && <Icon name="clock" size={12} />}
             {item}
+            {item === "Pending" && pendingCount > 0 && (
+              <span
+                style={{
+                  marginLeft: "4px",
+                  padding: "1px 5px",
+                  borderRadius: "99px",
+                  background: "#f5ad36",
+                  color: "#1c1203",
+                  fontSize: "9px",
+                  fontWeight: "800",
+                }}
+              >
+                {pendingCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -82,13 +117,21 @@ function DriverTripsTab({ trips }: { trips: Trip[] }) {
       <div className="trip-history-list">
         {visibleTrips.length === 0 ? (
           <div style={{ padding: "40px 16px", textAlign: "center", color: "#6d7586", fontSize: "13px" }}>
-            No trips logged in this view yet.
+            No trips found in this filter view.
           </div>
         ) : (
           visibleTrips.map((trip) => {
             const isVip = trip.trip_type === "VIP"
+            const isPaid =
+              (trip.payment_status || (trip.status === "Pending" ? "Pending" : "Paid")) === "Paid"
+
             return (
-              <article className="trip-history-item" key={trip.id}>
+              <article
+                className="trip-history-item"
+                key={trip.id}
+                onClick={() => onEditTrip(trip)}
+                title="Tap to edit trip details"
+              >
                 <div className={`trip-history-icon ${trip.trip_type.toLowerCase()}`}>
                   <Icon name={isVip ? "sparkles" : "route"} size={17} />
                 </div>
@@ -109,7 +152,28 @@ function DriverTripsTab({ trips }: { trips: Trip[] }) {
                 </div>
                 <div className="trip-history-fare">
                   <strong>Rs {Number(trip.fare).toFixed(2)}</strong>
-                  <span style={{ fontSize: "10px", color: "#697184" }}>{trip.status}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                    <button
+                      type="button"
+                      className={`payment-badge ${isPaid ? "paid" : "pending"}`}
+                      onClick={(e) => onTogglePayment(trip, e)}
+                      title={isPaid ? "Tap to mark as Pending" : "Tap to mark as Paid"}
+                    >
+                      <Icon name={isPaid ? "check" : "clock"} size={10} />
+                      {isPaid ? "Paid" : "Pending"}
+                    </button>
+                    <button
+                      type="button"
+                      className="trip-edit-btn"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onEditTrip(trip)
+                      }}
+                      title="Edit trip"
+                    >
+                      <Icon name="edit" size={11} /> Edit
+                    </button>
+                  </div>
                 </div>
               </article>
             )
@@ -316,6 +380,7 @@ export function DriverApp({
   fuelLogs,
   ledgerEntries,
   onTripLogged,
+  onTripUpdated,
   onFuelLogged,
   baseFare = 60,
   vipMultiplier = 1.8,
@@ -323,8 +388,28 @@ export function DriverApp({
   const [activeTab, setActiveTab] = useState<"shift" | "trips" | "insights" | "settings">("shift")
   const [onDuty, setOnDuty] = useState(true)
   const [tripSheetOpen, setTripSheetOpen] = useState(false)
+  const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
   const [fuelDrawerOpen, setFuelDrawerOpen] = useState(false)
   const [driverSwitcherOpen, setDriverSwitcherOpen] = useState(false)
+
+  const handleTogglePaymentStatus = async (trip: Trip, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation()
+    const currentStatus = trip.payment_status || (trip.status === "Pending" ? "Pending" : "Paid")
+    const nextStatus = currentStatus === "Paid" ? "Pending" : "Paid"
+    const updatedTrip: Trip = {
+      ...trip,
+      payment_status: nextStatus,
+      status: nextStatus === "Pending" ? "Pending" : "Approved",
+    }
+    if (onTripUpdated) {
+      onTripUpdated(updatedTrip)
+    }
+    try {
+      await toggleTripPaymentStatus(trip.id, nextStatus)
+    } catch (err) {
+      console.error("Failed to toggle payment status:", err)
+    }
+  }
 
   const today = new Date().toDateString()
   const todayTripsList = allTrips.filter(
@@ -564,41 +649,77 @@ export function DriverApp({
                     </p>
                   </div>
                 ) : (
-                  ledgerEntries.slice(0, 8).map((item) => (
-                    <article className="shift-item" key={item.id}>
-                      <div className={`log-icon ${item.tone}`}>
-                        <Icon
-                          name={
-                            item.type === "fuel"
-                              ? "fuel"
-                              : item.tone === "gold"
-                                ? "sparkles"
-                                : "route"
-                          }
-                          size={18}
-                        />
-                      </div>
-                      <div className="log-copy">
-                        <div className="log-title">
-                          <strong>{item.title}</strong>
-                          <time>{item.time}</time>
+                  ledgerEntries.slice(0, 8).map((item) => {
+                    const associatedTrip =
+                      item.type === "trip" ? allTrips.find((t) => t.id === item.id) : null
+                    const isPaid = associatedTrip
+                      ? (associatedTrip.payment_status ||
+                          (associatedTrip.status === "Pending" ? "Pending" : "Paid")) === "Paid"
+                      : true
+
+                    return (
+                      <article
+                        className="shift-item"
+                        key={item.id}
+                        onClick={() => {
+                          if (associatedTrip) setEditingTrip(associatedTrip)
+                        }}
+                        style={{ cursor: associatedTrip ? "pointer" : "default" }}
+                        title={associatedTrip ? "Tap to view or edit trip details" : undefined}
+                      >
+                        <div className={`log-icon ${item.tone}`}>
+                          <Icon
+                            name={
+                              item.type === "fuel"
+                                ? "fuel"
+                                : item.tone === "gold"
+                                  ? "sparkles"
+                                  : "route"
+                            }
+                            size={18}
+                          />
                         </div>
-                        <div className="log-meta">
-                          <span className={`tag ${item.tone}`}>
-                            {item.detail}
-                          </span>
-                          <b className={item.tone}>{item.amount}</b>
+                        <div className="log-copy">
+                          <div className="log-title">
+                            <strong>{item.title}</strong>
+                            <time>{item.time}</time>
+                          </div>
+                          <div className="log-meta">
+                            <span className={`tag ${item.tone}`}>
+                              {item.detail}
+                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              {associatedTrip && (
+                                <button
+                                  type="button"
+                                  className={`payment-badge ${isPaid ? "paid" : "pending"}`}
+                                  onClick={(e) => handleTogglePaymentStatus(associatedTrip, e)}
+                                  title={isPaid ? "Tap to mark as Pending" : "Tap to mark as Paid"}
+                                >
+                                  <Icon name={isPaid ? "check" : "clock"} size={10} />
+                                  {isPaid ? "Paid" : "Pending"}
+                                </button>
+                              )}
+                              <b className={item.tone}>{item.amount}</b>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </article>
-                  ))
+                      </article>
+                    )
+                  })
                 )}
               </div>
             </>
           )}
 
           {/* TAB 2: TRIPS VIEW */}
-          {activeTab === "trips" && <DriverTripsTab trips={allTrips} />}
+          {activeTab === "trips" && (
+            <DriverTripsTab
+              trips={allTrips}
+              onEditTrip={(trip) => setEditingTrip(trip)}
+              onTogglePayment={handleTogglePaymentStatus}
+            />
+          )}
 
           {/* TAB 3: INSIGHTS VIEW */}
           {activeTab === "insights" && (
@@ -668,6 +789,21 @@ export function DriverApp({
           baseFare={baseFare}
           vipMultiplier={vipMultiplier}
         />
+
+        {/* Edit Trip Modal (editable even after the trip) */}
+        {editingTrip && (
+          <EditTripModal
+            isOpen={Boolean(editingTrip)}
+            onClose={() => setEditingTrip(null)}
+            trip={editingTrip}
+            locations={locations}
+            onTripUpdated={(updated) => {
+              if (onTripUpdated) onTripUpdated(updated)
+              setEditingTrip(null)
+            }}
+            onLocationAdded={onLocationAdded}
+          />
+        )}
 
         {/* Log Fuel Drawer */}
         <LogFuelDrawer

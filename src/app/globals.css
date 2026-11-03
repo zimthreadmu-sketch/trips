@@ -271,20 +271,27 @@ button { color: inherit; }
 .tab-filter button.active, .insight-range button.active { color: #d9dee6; background: #20242d; box-shadow: inset 0 0 0 1px #303642; }
 .tab-filter button:last-child.active { color: var(--gold-bright); background: #2d2313; box-shadow: inset 0 0 0 1px #5d4721; }
 .trip-history-list { border: 1px solid #242934; border-radius: 13px; overflow: hidden; background: #101219; }
-.trip-history-item { display: flex; align-items: center; gap: 10px; min-height: 75px; padding: 12px; border-bottom: 1px solid #1e222c; }
+.trip-history-item { display: flex; align-items: center; gap: 10px; min-height: 75px; padding: 12px; border-bottom: 1px solid #1e222c; cursor: pointer; transition: background 0.15s ease; }
+.trip-history-item:hover { background: #141720; }
 .trip-history-item:last-child { border: 0; }
 .trip-history-icon { display: grid; place-items: center; width: 34px; height: 34px; flex: 0 0 auto; border-radius: 9px; color: var(--green-bright); background: #10281f; }
 .trip-history-icon.vip { color: var(--gold); background: #2a2011; }
 .trip-history-copy { min-width: 0; flex: 1; }
-.trip-history-time { display: block; margin-bottom: 4px; color: #5f6878; font-size: 7px; }
-.trip-history-copy > strong { display: flex; align-items: center; gap: 4px; overflow: hidden; color: #c7cdd6; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.trip-history-time { display: block; margin-bottom: 4px; color: #5f6878; font-size: 11px; }
+.trip-history-copy > strong { display: flex; align-items: center; gap: 4px; overflow: hidden; color: #c7cdd6; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .trip-history-copy > strong .icon { color: #596171; }
-.trip-history-copy > small { display: flex; align-items: center; gap: 7px; margin-top: 6px; color: #626b7b; font-size: 7px; }
-.trip-history-copy > small span { padding: 3px 5px; border-radius: 99px; color: #76d7b5; background: #10281f; font-weight: 700; }
+.trip-history-copy > small { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 6px; color: #7d8697; font-size: 11px; }
+.trip-history-copy > small span { padding: 2px 7px; border-radius: 99px; color: #76d7b5; background: #10281f; font-weight: 700; font-size: 10px; }
 .trip-history-copy > small span.vip { color: #efbb59; background: #2b2111; }
-.trip-history-fare { display: flex; flex-direction: column; align-items: flex-end; gap: 7px; }
-.trip-history-fare strong { color: #dce1e8; font-size: 10px; font-variant-numeric: tabular-nums; }
-.trip-history-fare button { padding: 0; border: 0; color: #687283; background: transparent; font-size: 7px; }
+.trip-history-fare { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.trip-history-fare strong { color: #f5f7fa; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.payment-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; cursor: pointer; border: 1px solid transparent; transition: all 0.15s ease; }
+.payment-badge.paid { background: rgba(32, 213, 155, 0.15); color: #20d59b; border-color: rgba(32, 213, 155, 0.35); }
+.payment-badge.paid:hover { background: rgba(32, 213, 155, 0.25); }
+.payment-badge.pending { background: rgba(245, 173, 54, 0.15); color: #f5ad36; border-color: rgba(245, 173, 54, 0.35); }
+.payment-badge.pending:hover { background: rgba(245, 173, 54, 0.25); }
+.trip-edit-btn { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 600; background: #161a24; border: 1px solid #283040; color: #8c95a6; cursor: pointer; transition: all 0.15s ease; }
+.trip-edit-btn:hover { background: #202634; color: #f5f7fa; border-color: #3f4b62; }
 .load-more-button { width: 100%; height: 38px; margin-top: 11px; border: 1px solid #292e39; border-radius: 9px; color: #7c8594; background: #14171e; font-size: 9px; font-weight: 600; }
 .insight-range { margin-top: 0; }
 .earnings-hero { position: relative; min-height: 232px; padding: 18px 18px 12px; overflow: hidden; border: 1px solid #285443; border-radius: 14px; background: radial-gradient(circle at 80% 0, #1d4c3b 0, transparent 48%), #11171a; }

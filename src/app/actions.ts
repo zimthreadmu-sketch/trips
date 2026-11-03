@@ -57,6 +57,8 @@ function buildLedgerEntries(trips: Trip[], fuels: FuelLog[]): LedgerEntry[] {
     numericAmount: Number(t.fare),
     tone: t.trip_type === "VIP" ? "gold" : "green",
     status: t.status,
+    payment_status: (t.payment_status || (t.status === "Pending" ? "Pending" : "Paid")) as "Paid" | "Pending",
+    payment_method: t.payment_method || "Cash",
     timestamp: t.logged_at,
     driver_name: t.driver_name || "Driver",
     driver_initials: t.driver_initials || computeInitials(t.driver_name || "DR"),
@@ -156,6 +158,7 @@ export async function getInitialData(): Promise<{
       const parsedTrips: Trip[] = tripsRes.map((t) => ({
         ...t,
         fare: Number(t.fare),
+        payment_status: (t.payment_status || (t.status === "Pending" ? "Pending" : "Paid")) as "Paid" | "Pending",
       }))
 
       const parsedFuels: FuelLog[] = fuelRes.map((f) => ({
@@ -313,7 +316,8 @@ export interface LogTripInput {
   destinationName: string
   tripType: "Regular" | "VIP"
   fare: number
-  paymentMethod: "Cash" | "Card" | "Account" | string
+  paymentMethod: "Cash" | "Card" | "Account" | "Juice" | string
+  paymentStatus?: "Paid" | "Pending"
   note?: string
   status?: "Approved" | "Pending"
   loggedAt?: string
@@ -331,6 +335,7 @@ export async function logTrip(data: LogTripInput): Promise<{ success: boolean; t
     const tripId = `trip_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
     const loggedAt = data.loggedAt || new Date().toISOString()
     const status = data.status || "Approved"
+    const paymentStatus = data.paymentStatus || "Paid"
     const fare = Number(data.fare)
     const driverId = data.driverId || ""
     const driverName = data.driverName || "Driver"
@@ -343,14 +348,14 @@ export async function logTrip(data: LogTripInput): Promise<{ success: boolean; t
       try {
         await initDb()
         const rows = (await sql`
-          INSERT INTO trips (id, driver_id, driver_name, driver_initials, vehicle, origin_name, destination_name, trip_type, fare, payment_method, note, status, logged_at)
-          VALUES (${tripId}, ${driverId}, ${driverName}, ${driverInitials}, ${vehicle}, ${data.originName}, ${data.destinationName}, ${data.tripType}, ${fare}, ${data.paymentMethod}, ${note}, ${status}, ${loggedAt})
+          INSERT INTO trips (id, driver_id, driver_name, driver_initials, vehicle, origin_name, destination_name, trip_type, fare, payment_method, payment_status, note, status, logged_at)
+          VALUES (${tripId}, ${driverId}, ${driverName}, ${driverInitials}, ${vehicle}, ${data.originName}, ${data.destinationName}, ${data.tripType}, ${fare}, ${data.paymentMethod}, ${paymentStatus}, ${note}, ${status}, ${loggedAt})
           RETURNING *;
         `) as Trip[]
 
         const inserted = rows[0]
         if (inserted) {
-          mockStore.addTrip({
+          const formattedTrip: Trip = {
             id: inserted.id,
             driver_id: inserted.driver_id,
             driver_name: inserted.driver_name,
@@ -361,13 +366,15 @@ export async function logTrip(data: LogTripInput): Promise<{ success: boolean; t
             trip_type: inserted.trip_type as "Regular" | "VIP",
             fare: Number(inserted.fare),
             payment_method: inserted.payment_method,
+            payment_status: (inserted.payment_status || "Paid") as "Paid" | "Pending",
             note: inserted.note,
             status: inserted.status as "Approved" | "Pending" | "Rejected",
             logged_at: inserted.logged_at,
-          })
+          }
+          mockStore.addTrip(formattedTrip)
           return {
             success: true,
-            trip: { ...inserted, fare: Number(inserted.fare) },
+            trip: formattedTrip,
           }
         }
       } catch (neonErr) {
@@ -387,6 +394,7 @@ export async function logTrip(data: LogTripInput): Promise<{ success: boolean; t
       trip_type: data.tripType,
       fare: fare,
       payment_method: data.paymentMethod,
+      payment_status: paymentStatus,
       note: note,
       status: status,
       logged_at: loggedAt,
@@ -400,6 +408,89 @@ export async function logTrip(data: LogTripInput): Promise<{ success: boolean; t
       error: (err as Error).message || "Failed to log trip.",
     }
   }
+}
+
+// ==========================================
+// 3B. UPDATE TRIP (FULL EDIT AFTER THE TRIP)
+// ==========================================
+export interface UpdateTripInput {
+  originName?: string
+  destinationName?: string
+  tripType?: "Regular" | "VIP"
+  fare?: number
+  paymentMethod?: string
+  paymentStatus?: "Paid" | "Pending"
+  note?: string
+}
+
+export async function updateTrip(
+  tripId: string,
+  data: UpdateTripInput
+): Promise<{ success: boolean; trip?: Trip; error?: string }> {
+  try {
+    if (!tripId) {
+      throw new Error("Trip ID is required.")
+    }
+    if (data.fare !== undefined && data.fare <= 0) {
+      throw new Error("Trip fare must be greater than Rs 0.")
+    }
+
+    const sql = getDbClient()
+    if (isNeonConfigured() && sql) {
+      try {
+        await initDb()
+        const rows = (await sql`
+          UPDATE trips
+          SET
+            origin_name = COALESCE(${data.originName ?? null}, origin_name),
+            destination_name = COALESCE(${data.destinationName ?? null}, destination_name),
+            trip_type = COALESCE(${data.tripType ?? null}, trip_type),
+            fare = COALESCE(${data.fare !== undefined ? Number(data.fare) : null}, fare),
+            payment_method = COALESCE(${data.paymentMethod ?? null}, payment_method),
+            payment_status = COALESCE(${data.paymentStatus ?? null}, payment_status),
+            note = COALESCE(${data.note ?? null}, note)
+          WHERE id = ${tripId}
+          RETURNING *;
+        `) as Trip[]
+
+        if (rows && rows[0]) {
+          const updatedTrip: Trip = {
+            ...rows[0],
+            fare: Number(rows[0].fare),
+            payment_status: (rows[0].payment_status || "Paid") as "Paid" | "Pending",
+          }
+          mockStore.updateTrip(tripId, updatedTrip)
+          return { success: true, trip: updatedTrip }
+        }
+      } catch (neonErr) {
+        console.error("[FleetPulse DB] Neon updateTrip failed, falling back to local store:", neonErr)
+      }
+    }
+
+    const updated = mockStore.updateTrip(tripId, {
+      ...(data.originName ? { origin_name: data.originName } : {}),
+      ...(data.destinationName ? { destination_name: data.destinationName } : {}),
+      ...(data.tripType ? { trip_type: data.tripType } : {}),
+      ...(data.fare !== undefined ? { fare: Number(data.fare) } : {}),
+      ...(data.paymentMethod ? { payment_method: data.paymentMethod } : {}),
+      ...(data.paymentStatus ? { payment_status: data.paymentStatus } : {}),
+      ...(data.note !== undefined ? { note: data.note } : {}),
+    })
+
+    if (!updated) {
+      return { success: false, error: "Trip not found." }
+    }
+    return { success: true, trip: updated }
+  } catch (err: unknown) {
+    return { success: false, error: (err as Error).message || "Failed to update trip." }
+  }
+}
+
+export async function toggleTripPaymentStatus(
+  tripId: string,
+  newPaymentStatus: "Paid" | "Pending"
+): Promise<{ success: boolean; trip?: Trip; error?: string }> {
+  return await updateTrip(tripId, { paymentStatus: newPaymentStatus })
 }
 
 // ==========================================

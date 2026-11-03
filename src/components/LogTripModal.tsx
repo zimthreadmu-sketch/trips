@@ -32,6 +32,7 @@ export function LogTripModal({
   const [fare, setFare] = useState<number | string>(baseFare)
   const [passengerRef, setPassengerRef] = useState("")
   const [payment, setPayment] = useState<string>("Cash")
+  const [paymentStatus, setPaymentStatus] = useState<"Paid" | "Pending">("Paid")
   const [isLogged, setIsLogged] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
@@ -111,6 +112,7 @@ export function LogTripModal({
       trip_type: tripType === "vip" ? "VIP" : "Regular",
       fare: numericFare,
       payment_method: payment,
+      payment_status: paymentStatus,
       note: note,
       status: "Approved",
       logged_at: loggedAt,
@@ -132,6 +134,7 @@ export function LogTripModal({
           tripType: tripType === "vip" ? "VIP" : "Regular",
           fare: numericFare,
           paymentMethod: payment,
+          paymentStatus: paymentStatus,
           note: note,
           status: "Approved",
           loggedAt,
@@ -465,11 +468,71 @@ export function LogTripModal({
                 type="button"
                 key={method}
                 className={payment === method ? "active" : ""}
-                onClick={() => setPayment(method)}
+                onClick={() => {
+                  setPayment(method)
+                  if (method === "Account") {
+                    setPaymentStatus("Pending")
+                  } else {
+                    setPaymentStatus("Paid")
+                  }
+                }}
               >
                 {method}
               </button>
             ))}
+          </div>
+
+          {/* Payment Status (Paid vs Pending) */}
+          <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #1f2533" }}>
+            <span style={{ display: "block", fontSize: "10px", fontWeight: "700", color: "#8991a3", letterSpacing: "0.08em", marginBottom: "8px" }}>
+              PAYMENT COLLECTION STATUS
+            </span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <button
+                type="button"
+                onClick={() => setPaymentStatus("Paid")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  height: "38px",
+                  borderRadius: "8px",
+                  fontWeight: "700",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  border: paymentStatus === "Paid" ? "1px solid #20d59b" : "1px solid #283040",
+                  background: paymentStatus === "Paid" ? "rgba(32, 213, 155, 0.15)" : "#131620",
+                  color: paymentStatus === "Paid" ? "#20d59b" : "#7d8597",
+                  boxShadow: paymentStatus === "Paid" ? "0 0 12px rgba(32, 213, 155, 0.2)" : "none",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <Icon name="check" size={14} /> Paid
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentStatus("Pending")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  height: "38px",
+                  borderRadius: "8px",
+                  fontWeight: "700",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  border: paymentStatus === "Pending" ? "1px solid #f5ad36" : "1px solid #283040",
+                  background: paymentStatus === "Pending" ? "rgba(245, 173, 54, 0.15)" : "#131620",
+                  color: paymentStatus === "Pending" ? "#f5ad36" : "#7d8597",
+                  boxShadow: paymentStatus === "Pending" ? "0 0 12px rgba(245, 173, 54, 0.2)" : "none",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <Icon name="clock" size={14} /> Pending
+              </button>
+            </div>
           </div>
         </div>
 
