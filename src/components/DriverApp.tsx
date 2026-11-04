@@ -523,47 +523,7 @@ export function DriverApp({
   const todayNet = todayRev - todayFuel
 
   return (
-    <main className={`mobile-shell ${desktopPreview ? "desktop-driver-preview" : ""}`}>
-      {desktopPreview && (
-        <aside className="driver-preview-intro">
-          {onAdminView && (
-            <button
-              type="button"
-              className="back-to-admin"
-              onClick={onAdminView}
-              aria-label="Back to Admin Dashboard"
-            >
-              <Icon name="arrow" size={16} /> Back to admin dashboard
-            </button>
-          )}
-          <Logo />
-          <h1>Driver Cockpit</h1>
-          <p>
-            Field-ready mobile interface built for single-hand operation, quick trip logging, and instant offline ledger sync.
-          </p>
-          <div className="preview-feature-list">
-            <span>
-              <i>
-                <Icon name="check" size={14} />
-              </i>{" "}
-              Lightning fast trip & fuel logging
-            </span>
-            <span>
-              <i>
-                <Icon name="check" size={14} />
-              </i>{" "}
-              Live Mauritius fare calculating
-            </span>
-            <span>
-              <i>
-                <Icon name="check" size={14} />
-              </i>{" "}
-              One-tap driver and vehicle switcher
-            </span>
-          </div>
-        </aside>
-      )}
-
+    <main className="mobile-shell">
       <section className="driver-app">
         <header className="driver-header">
           <div className="driver-brand-row">
@@ -997,34 +957,6 @@ export function DriverApp({
           />
         )}
       </section>
-
-      {desktopPreview && (
-        <aside className="driver-preview-guide">
-          <span className="preview-status">
-            <i /> Live Driver View
-          </span>
-          <h2>Field Operations Flow</h2>
-          <ol>
-            <li>
-              <span>01</span>
-              Tap <strong>+ Log Trip</strong> or <strong>⛽ Log Fuel</strong>
-            </li>
-            <li>
-              <span>02</span>
-              Choose or add new locations on the fly
-            </li>
-            <li>
-              <span>03</span>
-              Enter trip fare directly and submit
-            </li>
-            <li>
-              <span>04</span>
-              Tap profile avatar to switch driver or vehicle
-            </li>
-          </ol>
-          <small>Driver viewport 420px · Progressive Web App ready</small>
-        </aside>
-      )}
     </main>
   )
 }

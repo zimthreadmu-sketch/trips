@@ -311,7 +311,14 @@ export async function initDb(): Promise<{ mode: "neon" | "mock"; initialized: bo
   }
 
   try {
-    // 1. Create tables
+    // Fast path: Check if tables already exist to avoid 15 slow sequential DDL queries on cold start
+    const checkTable = (await sql`SELECT to_regclass('public.trips') as tbl;`) as Array<{ tbl: string | null }>
+    if (checkTable?.[0]?.tbl) {
+      isDbInitialized = true
+      return { mode: "neon", initialized: true }
+    }
+
+    // 1. Create tables if first-time run
     await sql`
       CREATE TABLE IF NOT EXISTS locations (
         id TEXT PRIMARY KEY,

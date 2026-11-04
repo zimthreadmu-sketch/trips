@@ -139,21 +139,12 @@ export async function getInitialData(): Promise<{
 
   if (mode === "neon" && sql) {
     try {
-      const locationsRes = (await sql`
-        SELECT * FROM locations WHERE is_active = true ORDER BY order_priority ASC, name ASC;
-      `) as Location[]
-
-      const driversRes = (await sql`
-        SELECT * FROM drivers WHERE status = 'ACTIVE' ORDER BY created_at ASC;
-      `) as Driver[]
-
-      const tripsRes = (await sql`
-        SELECT * FROM trips ORDER BY logged_at DESC;
-      `) as Trip[]
-
-      const fuelRes = (await sql`
-        SELECT * FROM fuel_logs ORDER BY logged_at DESC;
-      `) as FuelLog[]
+      const [locationsRes, driversRes, tripsRes, fuelRes] = (await Promise.all([
+        sql`SELECT * FROM locations WHERE is_active = true ORDER BY order_priority ASC, name ASC;`,
+        sql`SELECT * FROM drivers WHERE status = 'ACTIVE' ORDER BY created_at ASC;`,
+        sql`SELECT * FROM trips ORDER BY logged_at DESC;`,
+        sql`SELECT * FROM fuel_logs ORDER BY logged_at DESC;`,
+      ])) as [Location[], Driver[], Trip[], FuelLog[]]
 
       const parsedTrips: Trip[] = tripsRes.map((t) => ({
         ...t,

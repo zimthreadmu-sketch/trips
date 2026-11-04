@@ -276,7 +276,7 @@ export function FleetPulseApp({
       {/* 2. Driver App View (DEFAULT ON HOME PAGE) */}
       {currentView === "driver" && (
         <DriverApp
-          desktopPreview={true}
+          desktopPreview={false}
           onAdminView={() => setCurrentView("admin")}
           locations={locations}
           drivers={drivers}
@@ -313,8 +313,8 @@ export function FleetPulseApp({
         />
       )}
 
-      {/* 4. PWA Installation Prompt (for phones without installed PWA) */}
-      <PWAInstallPrompt />
+      {/* 4. PWA Installation Prompt (for phones without installed PWA, only when onboarding modal is not showing) */}
+      {!showOnboarding && <PWAInstallPrompt />}
     </>
   )
 }
